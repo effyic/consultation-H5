@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import chatApi from '@/api/chat'
-import {fetchEventSource} from '@microsoft/fetch-event-source'
 import MarkdownIt from 'markdown-it'
 import {computed, nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
+import {useChat} from "@/stores/chatService.ts";
 
+
+const chatStore = useChat();
 const md = new MarkdownIt()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
@@ -24,6 +25,7 @@ function removeSpaceAfterNumber(str: any) {
 }
 
 onMounted(() => {
+  chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
     if (container) {
@@ -44,7 +46,9 @@ watchEffect(()=>{
     toScrollBottom()
   }
 })
-
+function more(){
+  chatStore.questions()
+}
 onUnmounted(() => {
   if (webSocket.ws) {
     webSocket.ws.close(); // 组件销毁时关闭 WebSocket 连接
@@ -76,17 +80,11 @@ onUnmounted(() => {
             <div class="problemBox">
               <div class="problemHeader">
                 <div>常见问题</div>
-                <div>换一换</div>
+                <div @click="more">换一换</div>
               </div>
               <div class="listBox">
-                <div class="problemList">
-                  心率过快应该挂哪个科室
-                </div>
-                <div class="problemList">
-                  失眠要去看心理科吗
-                </div>
-                <div class="problemList">
-                  颈椎问题挂骨科还是中医科
+                <div class="problemList" v-for="(item,index) in chatStore.questionList" :key="index" @click="webSocket.sendMessage(item.question)">
+                  {{item.question}}
                 </div>
               </div>
             </div>
