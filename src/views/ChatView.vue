@@ -2,13 +2,11 @@
 import chatApi from '@/api/chat'
 import {fetchEventSource} from '@microsoft/fetch-event-source'
 import MarkdownIt from 'markdown-it'
-import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
 
 const md = new MarkdownIt()
 const webSocket = useWebSocket()
-const userContext = ref('')
-const historyList: any = ref<Array<History>>([]) // 问答数组
 const messageCont = ref<any>(null)
 
 //  聊天信息置底
@@ -41,6 +39,12 @@ onMounted(() => {
   })
 })
 
+watchEffect(()=>{
+  if (webSocket.historyList[webSocket.historyList.length -1]?.content) {
+    toScrollBottom()
+  }
+})
+
 onUnmounted(() => {
   if (webSocket.ws) {
     webSocket.ws.close(); // 组件销毁时关闭 WebSocket 连接
@@ -51,11 +55,11 @@ onUnmounted(() => {
 
 <template>
   <div ref="main" class="main">
-<!--    <div class="titleContainer">-->
-<!--      <svg-icon class="icon" height="18px" name="action" style="color:#676f83" width="18px"/>-->
-<!--      <div class="titleName">身心医院智能AI问诊辅助系统</div>-->
-<!--      <svg-icon class="icon" height="18px" name="more" style="color:#676f83" width="18px"/>-->
-<!--    </div>-->
+    <!--    <div class="titleContainer">-->
+    <!--      <svg-icon class="icon" height="18px" name="action" style="color:#676f83" width="18px"/>-->
+    <!--      <div class="titleName">身心医院智能AI问诊辅助系统</div>-->
+    <!--      <svg-icon class="icon" height="18px" name="more" style="color:#676f83" width="18px"/>-->
+    <!--    </div>-->
     <div class="dialogue">
       <div ref="messageCont" class="content">
         <div class="message-wrapper">
@@ -74,35 +78,35 @@ onUnmounted(() => {
                 <div>常见问题</div>
                 <div>换一换</div>
               </div>
-             <div class="listBox">
-               <div class="problemList">
-                 心率过快应该挂哪个科室
-               </div>
-               <div class="problemList">
-                 失眠要去看心理科吗
-               </div>
-               <div class="problemList">
-                 颈椎问题挂骨科还是中医科
-               </div>
-             </div>
+              <div class="listBox">
+                <div class="problemList">
+                  心率过快应该挂哪个科室
+                </div>
+                <div class="problemList">
+                  失眠要去看心理科吗
+                </div>
+                <div class="problemList">
+                  颈椎问题挂骨科还是中医科
+                </div>
+              </div>
             </div>
           </div>
-          <div v-for="(item, i) in historyList" :key="i" class="responseCont">
+          <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
-            <div v-if="item.role === 'user'" class="infoCont">
+            <div v-if="item.role == 'user'" class="infoCont">
               <div class="textCont">
                 <p>{{ item.content }}</p>
               </div>
-<!--              <div class="avatar">-->
-<!--                <img :src="UserIcon" alt="">-->
-<!--              </div>-->
+              <!--              <div class="avatar">-->
+              <!--                <img :src="UserIcon" alt="">-->
+              <!--              </div>-->
             </div>
             <!-- AI助手消息 -->
-            <div v-else :class="{ 'mt-30': i > 0 && historyList[i-1].type === 'chat_stream' }"
+            <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i-1].type === 'chat_stream' }"
                  class="chatAnswer">
-<!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
+              <!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
               <div :class="item.content === '' ? 'isLoading':'chatTxt'">
-                <div v-html="md.render(item.message ? removeSpaceAfterNumber(item.content) : '')"/>
+                <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')"/>
               </div>
             </div>
           </div>
@@ -374,9 +378,14 @@ onUnmounted(() => {
   }
 
   .dialogue::-webkit-scrollbar {
-    width: 0 !important
+    width: 0 !important;
   }
-
+  .content::-webkit-scrollbar {
+    width: 0 !important;
+  }
+  .message-wrapper::-webkit-scrollbar{
+    display: none !important;
+  }
   .titleContainer {
     height: 56px;
     color: #354052;
