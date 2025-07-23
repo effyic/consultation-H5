@@ -1,0 +1,1182 @@
+<script lang="ts" setup>
+import chatApi from '@/api/chat'
+import {fetchEventSource} from '@microsoft/fetch-event-source'
+import MarkdownIt from 'markdown-it'
+import {showToast} from 'vant'
+import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue'
+import {useRoute} from 'vue-router'
+import UserIcon from '@/assets/user.png'
+import chatIcon from '@/assets/chat.png'
+
+
+const md = new MarkdownIt()
+const userContext = ref('')
+const historyList: any = ref<Array<History>>([]) // 问答数组
+const messageCont = ref<any>(null)
+const route = useRoute()
+const external_id = ref('')
+const currentController = ref<AbortController | null>(null)
+const activeIntervals = ref<{ [key: string]: number }>({})
+let abortController: AbortController | null = null
+
+// 分页相关
+const page = ref(1)
+const pageSize = ref(10)
+const hasMore = ref(true)
+const loading = ref(false)
+
+const checkScroll = () => {
+  const container = messageCont.value
+  if (!container) return
+
+  const scrollPosition = container.scrollTop
+  // console.log(scrollPosition,'scrollPosition')
+  const threshold = 50
+
+  if (scrollPosition <= threshold) {
+    if (hasMore.value && !loading.value) {
+      page.value++
+      getHistory()
+    }
+  }
+}
+
+function getConversation() {
+  const consultationId = route.params.consultationId
+  const date: any = route.params.date
+  // consultationId: 10086 10010
+  chatApi.getConversations(consultationId, date).then((res: any) => {
+    external_id.value = res.external_id
+    getHistory()
+  })
+}
+
+// 回答历史
+function getHistory() {
+  if (loading.value || !hasMore.value) return
+  loading.value = true
+
+  const container = messageCont.value
+  if (container) {
+    container.style.scrollBehavior = 'auto'
+  }
+
+  chatApi.messages({
+    conversation_external_id: external_id.value,
+    page: page.value,
+    limit: pageSize.value
+  }).then((res: any) => {
+    const messages = res.messages.reverse()
+    if (page.value === 1) {
+      historyList.value = messages
+      nextTick(() => {
+        toScrollBottom()
+      })
+    } else {
+      const prevHeight = messageCont.value?.scrollHeight || 0
+      // 更新数据
+      historyList.value = [...messages, ...historyList.value]
+
+      nextTick(() => {
+        if (messageCont.value) {
+          messageCont.value.scrollTop = messageCont.value.scrollHeight - prevHeight
+          requestAnimationFrame(() => {
+            messageCont.value.style.scrollBehavior = 'smooth'
+          })
+        }
+      })
+    }
+
+    hasMore.value = messages.length === pageSize.value
+    loading.value = false
+  }).catch(() => {
+    loading.value = false
+    if (messageCont.value) {
+      messageCont.value.style.scrollBehavior = 'smooth'
+    }
+  })
+}
+
+const isReplying = computed(() => {
+  return historyList.value.length > 0 && historyList.value[historyList.value.length - 1].loading
+})
+
+function cleanupRequest() {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+}
+
+function sendUserContext(msg: string) {
+  if (!msg) {
+    return false
+  }
+  // 如果有消息正在回答中，显示提示并返回
+  if (isReplying.value) {
+    showToast('请等待当前回答完成')
+    return false
+  } else {
+    userContext.value = ''
+    let userData: any = {
+      role: 'user',
+      content: msg,
+      loading: false
+    }
+    historyList.value.push(userData)
+    let assistantData = {
+      role: 'assistant',
+      content: '',
+      loading: true
+    }
+    historyList.value.push(assistantData)
+    toScrollBottom()
+
+    // 如果存在之前的请求，先中止它
+    if (abortController) {
+      abortController.abort()
+      abortController = null
+    }
+
+    try {
+      abortController = new AbortController()
+      fetchEventSource('/api/messages',
+          {
+            method: 'post',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversation_external_id: external_id.value,
+              user_content: msg
+            }),
+            signal: abortController.signal,
+            openWhenHidden: false,
+            onmessage(e) {
+              try {
+                if (e.data.includes('[DONE]')) {
+                  if (abortController) {
+                    abortController.abort()
+                    abortController = null
+                  }
+                  historyList.value[historyList.value.length - 1].loading = false
+                } else {
+                  let dataMessage = JSON.parse(e.data)
+                  historyList.value[historyList.value.length - 1].content = dataMessage.content
+                }
+              } catch (error) {
+                cleanupRequest()
+                showToast('消息处理出错')
+              }
+            },
+            onclose() {
+              cleanupRequest()
+            },
+            onerror(error) {
+              cleanupRequest()
+              showToast('网络请求出错')
+            },
+          })
+    } catch (error) {
+      cleanupRequest()
+      showToast('发送消息失败')
+    }
+  }
+}
+
+//  聊天信息置底
+function toScrollBottom() {
+  nextTick(() => {
+    const container = messageCont.value
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  })
+}
+
+function removeSpaceAfterNumber(str: any) {
+  return str.replace(/(\d+)\.\s+/g, '\$1.')
+}
+
+onMounted(() => {
+  nextTick(() => {
+    const container = messageCont.value
+    if (container) {
+      container.addEventListener('scroll', checkScroll, {passive: true})
+      container.style.cssText = `
+        will-change: transform;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+      `
+    }
+  })
+})
+
+onUnmounted(() => {
+  const container = messageCont.value
+  if (container) {
+    container.removeEventListener('scroll', checkScroll)
+  }
+})
+
+</script>
+
+<template>
+  <div ref="main" class="main">
+<!--    <div class="titleContainer">-->
+<!--      <svg-icon class="icon" height="18px" name="action" style="color:#676f83" width="18px"/>-->
+<!--      <div class="titleName">身心医院智能AI问诊辅助系统</div>-->
+<!--      <svg-icon class="icon" height="18px" name="more" style="color:#676f83" width="18px"/>-->
+<!--    </div>-->
+    <div class="dialogue">
+      <div ref="messageCont" class="content">
+        <div class="message-wrapper">
+          <div class="promptBox">
+            <div class="promptHeader">
+              <img src="@/assets/user.png">
+              <div class="titleName">
+                <div>
+                  Hi～我是朝阳医院智能分诊助手
+                </div>
+                <p>我已解答108万+问题，有什么需要我帮你的？</p>
+              </div>
+            </div>
+            <div class="problemBox">
+              <div class="problemHeader">
+                <div>常见问题</div>
+                <div>换一换</div>
+              </div>
+             <div class="listBox">
+               <div class="problemList">
+                 心率过快应该挂哪个科室
+               </div>
+               <div class="problemList">
+                 失眠要去看心理科吗
+               </div>
+               <div class="problemList">
+                 颈椎问题挂骨科还是中医科
+               </div>
+             </div>
+            </div>
+          </div>
+          <div v-for="(item, i) in historyList" :key="i" class="responseCont">
+            <!-- 用户消息 -->
+            <div v-if="item.role === 'user'" class="infoCont">
+              <div class="textCont">
+                <p>{{ item.content }}</p>
+              </div>
+<!--              <div class="avatar">-->
+<!--                <img :src="UserIcon" alt="">-->
+<!--              </div>-->
+            </div>
+            <!-- AI助手消息 -->
+            <div v-if="item.role === 'assistant'" :class="{ 'mt-30': i > 0 && historyList[i-1].role === 'assistant' }"
+                 class="chatAnswer">
+<!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
+              <div :class="item.content === '' ? 'isLoading':'chatTxt'">
+                <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="Bottombox">
+        <div class="defaultInputText">
+          <div class="sendbox">
+            <input
+                v-model.trim="userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
+                @keydown.enter.stop="sendUserContext(userContext)"
+            >
+            <div class="sendBtn" @click="sendUserContext(userContext)">
+              <div class="iconWrapper">
+                <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</template>
+
+<style lang="scss" scoped>
+@mixin thinking-border {
+  color: #57606a;
+  border-left: 2px solid #989a9f;
+  padding-left: 10px
+}
+
+@mixin avatar-img {
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  // border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin tool {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: black;
+
+  &.active {
+    background: #E1EFFF;
+    color: #2B7DFF;
+  }
+
+  img {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+  }
+
+}
+
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.news {
+  width: calc(100vw - 30px);
+  height: calc(100vh - 40px);
+  background-color: #fff;
+  border-radius: 15px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.news-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  padding: 20px 20px 0;
+  border-radius: 15px 15px 0 0;
+  height: 30px;
+
+  .close-btn {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 23px;
+    font-weight: bold;
+    color: #333;
+    transition: all 0.3s ease;
+    background-color: #f5f5f5;
+    border-radius: 50%;
+  }
+}
+
+.news-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  padding-top: 13px;
+
+  .news-card {
+    background: #fff;
+    border-radius: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #f7f8fa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .news-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #2B7DFF;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .news-content {
+      font-size: 13px;
+      color: #606266;
+      line-height: 1.6;
+    }
+  }
+}
+
+.main {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100vw !important;
+  height: 100vh; /* 回退方案 */
+  height: calc(var(--vh) * 100);
+  background: #E6E9EE;
+
+  &.white-bg {
+    background: white;
+  }
+
+  .welcome-box {
+    background: white;
+    padding: 50px;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .welcome-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1c64f2;
+      text-align: center;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      img {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        margin-right: 5px;
+      }
+
+      span {
+        font-weight: bold;
+        color: #425192;
+      }
+    }
+
+    .welcome-content {
+      margin-bottom: 40px;
+
+      p {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+
+        li {
+          font-size: 15px;
+          color: #666;
+          margin-bottom: 12px;
+          position: relative;
+          padding-left: 24px;
+          line-height: 24px;
+
+          &:before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 6px;
+            height: 6px;
+            background: #425192;
+            border-radius: 50%;
+          }
+        }
+      }
+    }
+
+    .welcome-button {
+      background: #425192;
+      color: white;
+      padding: 14px 0;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+      width: 200px;
+
+      &:hover {
+        background: #1955cc;
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+
+
+  .Title {
+    display: flex;
+    position: absolute;
+
+    img {
+      width: 32px;
+      height: 32px;
+      display: inline-block;
+    }
+
+  }
+
+  .dialogue::-webkit-scrollbar {
+    width: 0 !important
+  }
+
+  .titleContainer {
+    height: 56px;
+    color: #354052;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+
+    .titleName {
+      flex-grow: 1;
+      text-align: center;
+    }
+
+    .icon {
+      cursor: pointer;
+    }
+  }
+
+  .dialogue {
+    // height: calc(100vh - 90px); /* 回退方案 */
+    height: calc(var(--vh) * 100);
+    //background:#F8F8FA;
+    background-image: linear-gradient(180deg, rgba(249, 250, 251, 0.9), rgba(242, 244, 247, 0.9) 90.48%);
+    //border-top-left-radius: 20px;
+    //border-top-right-radius: 20px;
+    //padding:24px 16px;
+    padding: 16px 12px;
+    box-sizing: border-box;
+
+    .content {
+      height: calc(var(--vh) * 100 - 90px);
+      overflow-y: auto;
+      background-size: cover;
+      padding-bottom: 20px;
+      position: relative;
+
+      .loading-more {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        text-align: center;
+        padding: 10px 0;
+        color: #2B7DFF;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(248, 248, 250, 0.9);
+        backdrop-filter: blur(4px);
+
+        &::before,
+        &::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: #E5E7EB;
+        }
+      }
+
+      .message-wrapper {
+        min-height: 100%;
+        //padding-top: 10px;
+      }
+      .promptBox{
+        height: 282px;
+        width: 100%;
+        border-radius: 16px;
+        color: #000;
+        overflow: hidden;
+        background: linear-gradient(180deg, #CAE3FF 0%, #E8F3FF 100%);
+        .promptHeader{
+          display: flex;
+          align-items: center;
+          padding:22px 10px;
+          img{
+            width: 40px;
+            height: 40px;
+          }
+          .titleName{
+            margin-left: 10px;
+            white-space: nowrap;
+            div{
+              font-weight: 500;
+              color:#092E5C;
+              font-size: 20px;
+            }
+            p{
+              font-size: 14px;
+            }
+          }
+        }
+        .problemBox{
+          width: 100%;
+          border-radius: 16px;
+          background: #fff;
+          height: 100%;
+          .problemHeader{
+            display: flex;
+            justify-content: space-between;
+            div:nth-child(1){
+              width:64px;
+              height: 22px;
+              background: linear-gradient(93.11deg, #529EEE 4.29%, #31E2F9 124.29%);
+              border-radius:16px 0 16px 0;
+              font-size: 12px;
+              font-weight: 500;
+              color: #fff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            div:nth-child(2){
+              margin:10px 16px 0 0;
+              color: #092E5C;
+              font-size: 14px;
+            }
+          }
+          .listBox{
+            padding: 0 16px;
+            box-sizing: border-box;
+            .problemList{
+              border-radius: 60px;
+              background: #f0f2f5;
+              width: 100%;
+              padding: 8px 14px;
+              margin: 8px 0;
+              font-size: 14px;
+              font-weight: 400;
+              color: #5E6C83;
+            }
+          }
+
+        }
+      }
+
+      .responseCont {
+        &:first-of-type {
+          .infoCont {
+            padding-top: 0;
+          }
+        }
+      }
+
+      .stopMessage {
+        position: fixed;
+        bottom: 70px;
+        width: 95%;
+        text-align: center;
+        border-radius: 10px;
+        color: #fff;
+        display: inline-grid;
+        margin-bottom: 5px;
+
+        .stopBtn {
+          width: 82px;
+          height: 32px;
+          background: #fff;
+          box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+          border-radius: 20px;
+          margin: 0 auto;
+          cursor: pointer;
+          display: flex;
+          justify-content: center;
+          font-size: 12px;
+          align-items: center;
+          color: #0A1629;
+
+          .stopIcon {
+            width: 16px;
+            height: 16px;
+          }
+        }
+      }
+
+      .responseCont {
+
+        //padding-bottom:14px;
+        &:last-child {
+          padding-bottom: 14px;
+        }
+
+        .infoCont {
+          display: flex;
+          justify-content: end;
+          padding: 30px 0;
+
+          .avatar {
+            @include avatar-img;
+            margin-left: 16px;
+            flex-shrink: 0;
+            background: #BBDCFC;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+
+            img {
+              display: inline-block;
+              width: 40px;
+              height: 40px;
+              position: absolute;
+              bottom: -7px;
+            }
+          }
+
+          .textCont {
+            //background: #e1effe;
+            background: #529EEE4D;
+            font-size: 15px;
+            //color: #101828;
+            color:#000000D9;
+            padding: 12px 16px;
+            box-sizing: border-box;
+            display: inline-block;
+            border-radius: 15px;
+            white-space: pre-wrap;
+            height: 48px;
+          }
+        }
+
+        .chatAnswer {
+          display: flex;
+          justify-content: start;
+
+          &.mt-30 {
+            margin-top: 30px;
+          }
+
+          .avatar {
+            @include avatar-img;
+            margin-right: 16px;
+            flex-shrink: 0;
+          }
+
+          .chatTxt {
+            font-size: 15px;
+            background: #fff;
+            color: #101828;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 10px;
+            // display: flex;
+            // align-items: center;
+            max-width: calc(100% - 40px);
+            // flex-direction: column;
+            .webSearch {
+              color: #57606a;
+              color: #2B7DFF;
+              // padding-left: 8px;
+              box-sizing: border-box;
+
+              p.title {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+              }
+
+              .webSearch-list {
+                display: flex;
+                flex-wrap: wrap;
+                padding-left: 20px;
+                box-sizing: border-box;
+
+                span {
+                  padding: 2px 8px;
+                  border-radius: 20px;
+                  font-size: 11px;
+                  font-weight: 400;
+                  line-height: 20px;
+                  letter-spacing: .25px;
+                  text-align: left;
+                  // background: #e5e7ed;
+                  color: #333;
+                  border: 1px solid rgba(87, 96, 106, 0.3);
+                  cursor: pointer;
+                }
+              }
+
+              .webSearch-link {
+                padding-left: 20px;
+                box-sizing: border-box;
+
+                p {
+                  a {
+                    color: #2B7DFF;
+                    text-decoration: none;
+                    display: inline-block;
+                    height: 20px;
+                  }
+                }
+              }
+
+              div:nth-child(2) {
+                margin: 5px 0px;
+              }
+            }
+
+            .arrow-up {
+              display: inline-block;
+              width: 6px;
+              height: 6px;
+              border-left: 1px solid #2B7DFF;
+              border-top: 1px solid #2B7DFF;
+              transform: rotate(45deg);
+              transition: transform 0.3s ease;
+              vertical-align: middle;
+              position: relative;
+              top: -1px;
+              margin-right: 3px;
+
+              &.rotate {
+                transform: rotate(134deg);
+                //   position: relative;
+                // top: -2px;
+              }
+            }
+
+            .borderColor {
+              border-left: 1px solid #57606a;
+              border-top: 1px solid #57606a;
+            }
+
+            .thinking-text {
+              @include thinking-border;
+            }
+
+            .thinking-content {
+              @include thinking-border;
+            }
+
+            .question-item {
+              p::before {
+                content: '';
+                display: inline-block;
+                /* 确保圆点在文本旁边 */
+                width: 5px;
+                /* 圆点的宽度 */
+                height: 5px;
+                /* 圆点的高度 */
+                background-color: #fff;
+                /* 圆点的颜色 */
+                border-radius: 50%;
+                /* 圆形 */
+                margin-right: 8px;
+                /* 圆点与文本之间的间距 */
+                vertical-align: middle;
+                /* 垂直对齐 */
+              }
+            }
+
+            div {
+              :deep .hljs {
+                white-space: normal;
+              }
+            }
+
+            .loading {
+              display: inline-block;
+              width: 10px;
+              height: 10px;
+              margin-left: 10px;
+              border: 2px solid #333;
+              border-top-color: transparent;
+              border-radius: 100%;
+              background-color: transparent;
+              animation: circle infinite 0.75s linear;
+            }
+
+            @keyframes circle {
+              0% {
+                transform: rotate(0);
+              }
+
+              100% {
+                transform: rotate(360deg);
+              }
+            }
+          }
+
+          .isLoading,
+          .isLoading::before,
+          .isLoading::after {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: rgba(102, 112, 133, 0.357);
+            animation: pulse 1s infinite ease-in-out;
+          }
+
+          .isLoading {
+            position: relative;
+            animation-delay: 0s;
+            margin: 20px 10px;
+            background: #fff;
+          }
+          .isLoading::before {
+            position: absolute;
+            left: -10px;
+            animation-delay: 0.33s;
+          }
+
+          .isLoading::after {
+            position: absolute;
+            right: -10px;
+            animation-delay: 0.66s;
+          }
+          @keyframes pulse {
+            0%, 100% {
+              background-color: rgba(102, 112, 133, 0.357);
+            }
+            50% {
+              background-color: rgba(102, 112, 133, 0.857);
+            }
+          }
+        }
+      }
+
+      .box {
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 50px 30px 10px 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        .probleText {
+          font-size: 12px;
+          color: #2D2D2D;
+          display: flex;
+          align-items: center;
+          font-weight: 500;
+
+          .Icon {
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+          }
+        }
+
+      }
+    }
+  }
+
+  .Bottombox {
+    width: calc(100vw - 32px);
+    height: 52px;
+    box-sizing: border-box;
+    position: fixed;
+    bottom: 15px;
+    left: 16px;
+    z-index: 10;
+    .audioPlaying {
+      // display: flex;
+      // align-items: center;
+      width: 100%;
+      height: calc(50px - 16px);
+      z-index: 1;
+      overflow: hidden;
+      border: 2px solid transparent;
+      border-radius: 70px;
+
+      background: linear-gradient(white, white) padding-box,
+        /* 背景色 */
+      linear-gradient(90deg, #2F82FF, #05AFF8) border-box;
+
+    }
+
+    .tip {
+      color: #00000073;
+      font-size: 9px;
+      text-align: center;
+      margin: 0px;
+      margin-top: 5px;
+    }
+
+    .stopMessage {
+      position: fixed;
+      bottom: 70px;
+      width: 95%;
+      text-align: center;
+      border-radius: 10px;
+      color: #fff;
+      display: inline-grid;
+      margin-bottom: 5px;
+
+      .stopBtn {
+        width: 82px;
+        height: 32px;
+        background: #fff;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 20px;
+        margin: 0 auto;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        font-size: 12px;
+        align-items: center;
+        color: #0A1629;
+
+        .stopIcon {
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+
+    .defaultInputText {
+      width: 100%;
+      height: 52px;
+
+      .icon {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+      }
+
+      .toolbox {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-top: 5px;
+
+        .deepThinking {
+          @include tool;
+
+        }
+
+        .onlineSearch {
+          @include tool;
+        }
+
+      }
+
+      .sendBtn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 13px;
+        color: #2B7DFF;
+        font-weight: 500;
+
+        &.disabled {
+          cursor: not-allowed;
+        }
+
+        .iconWrapper {
+          //background-color: #1c64f2;
+          border-radius: 8px;
+          margin-right: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.3s ease;
+        }
+
+        .sendicon {
+          width: 24px;
+          height: 24px;
+          padding: 0;
+          filter: brightness(0) invert(1); /* 使图标变为白色 */
+          margin-left: 4px;
+        }
+      }
+
+      .sendbox {
+        width: 100%;
+        height: 48px;
+        line-height: 48px;
+        z-index: 1;
+        overflow: hidden;
+        border-radius: 70px;
+        padding-left: 10px;
+        padding-right: 10px;
+        box-sizing: border-box;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: (0px 0px #0000, 0 0 #0000), (0px 0px #0000, 0px 0px #0000), 0px 2px 4px -2px rgba(16, 24, 40, .06), 0px 4px 8px -2px rgba(16, 24, 40, .1);
+        // padding-bottom: 9px;
+        background: url("@/assets/sendBg.png") no-repeat;
+        background-size: 100% 100%;
+
+        .sendInput {
+          font-size: 15px;
+          color: #333;
+          font-weight: 400;
+          background: transparent !important;
+
+          &:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+          }
+
+          &:focus {
+            outline: none;
+          }
+
+          display: inline-block;
+          border: none;
+          background: #fff;
+          width: 80%;
+          box-sizing: border-box;
+          overflow: auto;
+          word-break: break-word;
+        }
+
+        .sendicon {
+          width: 24px;
+          height: 24px;
+          padding-right: 3px;
+        }
+      }
+    }
+
+    .bgbom {
+      height: 95px;
+    }
+  }
+
+}
+</style>
