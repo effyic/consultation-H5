@@ -5,7 +5,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/chat',
+      redirect: '/department',
     },
     {
     // /:consultationId/:date
@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'chat',
       component: () => import('@/views/ChatView.vue'),
     },
+    {
+        path: '/department',
+        name: 'department',
+        component: () => import('@/views/DepartmentView.vue'),
+      },
   ],
 })
 
