@@ -1,13 +1,15 @@
 import {ref} from 'vue'
 import {defineStore} from 'pinia'
+import {showToast} from "vant";
 
 export const useWebSocket = defineStore('webSocket', () => {
         const userContext = ref('')
-        const historyList: any = ref<Array<any>>([]) // 问答数组
-        const messageCont = ref<any>(null)
+        const historyList: any = ref<any>([]) // 问答数组
         let ws: any = null // WebSocket 实例
         let reconnectTimeout: any = null // 重连超时控制
         const chat_id = ref(0)
+        const hospital_id = ref<any>(1)
+        const isReplying = ref(false)
 
         const connectWebSocket = () => {
             ws = new WebSocket('ws://192.168.0.160:8080/api/chat/ws')
@@ -15,25 +17,31 @@ export const useWebSocket = defineStore('webSocket', () => {
             ws.onopen = () => {
                 console.log('连接建立')
             }
-
-            ws.onmessage = (e:any) => {
+            ws.onmessage = (e: any) => {
                 const data = JSON.parse(e.data); // 转换为对象
-                console.log(data);       // 现在才能访问 content
-                historyList.value = data;
                 chat_id.value = data.chat_id
+                const last = historyList.value[historyList.value.length - 1];
+                if (last.role === 'assistant') {
+                    historyList.value[historyList.value.length - 1] = data
+                } else {
+                    historyList.value[historyList.value.length - 1].content += data.content
+                }
+                // 判断是否结束
+                if (data.done) {
+                    isReplying.value = false;
+                }
             }
-            ws.onerror = (error:any) => {
-                console.error("WebSocket 发生错误", error);
+            ws.onerror = (error: any) => {
+                console.error("WebSocket 发生错误", JSON.parse(error));
             };
 
-            ws.onclose = (event:any) => {
-                console.log("WebSocket 连接已关闭", event.code);
+            ws.onclose = (event: any) => {
+                console.log("WebSocket 连接已关闭");
                 handleReconnect(); // WebSocket 连接关闭时尝试重连
             }
         }
 
 
-        // 处理 WebSocket 连接断开后的重连
         const handleReconnect = () => {
             // 如果已经在重连，避免重复重连
             if (reconnectTimeout) {
@@ -60,21 +68,32 @@ export const useWebSocket = defineStore('webSocket', () => {
             }
         };
 
-        const sendMessage = (context:string) => {
+        const sendMessage = (context: string) => {
             if (!context) {
                 return false
             }
-            let data = {
-                type: "chat",
-                role:'user',
-                message: context,
-                hospital_id: 1,
-                chat_id: chat_id.value,
+            if (isReplying.value) {
+                showToast('请等待当前回答完成')
+                return false
+            } else {
+                let user = {
+                    type: "chat",
+                    role: 'user',
+                    message: context,
+                    content:context,
+                    hospital_id: hospital_id.value,
+                    chat_id: chat_id.value,
+                }
+                historyList.value.push(user)
+                let assistantData = {
+                    role: 'assistant',
+                    content: '',
+                }
+                historyList.value.push(assistantData)
+                ws.send(JSON.stringify(user))
+                isReplying.value = true
+                userContext.value = ''
             }
-            console.log('????',data)
-            historyList.value.push(data)
-            ws.send(JSON.stringify(data))
-            userContext.value = ''
         }
         return {
             historyList,
