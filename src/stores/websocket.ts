@@ -12,7 +12,7 @@ export const useWebSocket = defineStore('webSocket', () => {
         const isReplying = ref(false)
 
         const connectWebSocket = () => {
-            ws = new WebSocket('ws://192.168.0.160:8080/api/chat/ws')
+            ws = new WebSocket('ws://172.16.1.24:30137/api/chat/ws')
 
             ws.onopen = () => {
                 console.log('连接建立')
@@ -28,6 +28,12 @@ export const useWebSocket = defineStore('webSocket', () => {
                 }
                 // 判断是否结束
                 if (data.done) {
+                    if (data.quick_options) {
+                        historyList.value[historyList.value.length - 1].quick_options = data.quick_options
+                    }
+                    if (data.recommended_dept) {
+                        historyList.value[historyList.value.length - 1].recommended_dept = data.recommended_dept
+                    }
                     isReplying.value = false;
                 }
             }
@@ -80,7 +86,7 @@ export const useWebSocket = defineStore('webSocket', () => {
                     type: "chat",
                     role: 'user',
                     message: context,
-                    content:context,
+                    content: context,
                     hospital_id: hospital_id.value,
                     chat_id: chat_id.value,
                 }
@@ -99,6 +105,7 @@ export const useWebSocket = defineStore('webSocket', () => {
             historyList,
             ws,
             userContext,
+            chat_id,
             connectWebSocket,
             sendMessage,
             checkConnectionStatus

@@ -3,27 +3,27 @@
     <!-- 顶部搜索栏 -->
     <div class="search-header">
       <div class="search-header-content">
-        <div class="back-button">
-          <img src="@/assets/back.png" alt="返回" style="width: 24px; height: 24px;display: block" />
+        <div class="back-button" @click="router.push('/index')">
+          <img alt="返回" src="@/assets/back.png" style="width: 24px; height: 24px;display: block"/>
         </div>
         <div class="search-bar">
-          <input 
-            type="text" 
-            placeholder="搜索科室" 
-            v-model="search"
-            @keyup.enter="handleSearch"
+          <input
+              v-model="search"
+              placeholder="搜索科室"
+              type="text"
+              @keyup.enter="handleSearch"
           />
         </div>
       </div>
       <!-- 智能分诊卡片 -->
       <div class="ai-card">
         <div class="hospital-info">
-          <img src="@/assets/hospital-logo.png" alt="朝阳医院智能分诊" class="hospital-logo" />
+          <img alt="朝阳医院智能分诊" class="hospital-logo" src="@/assets/hospital-logo.png"/>
           <span class="hospital-name" style="font-size: 14px;font-weight: 600;color: #5E6C83;">朝阳医院智能分诊</span>
         </div>
         <div class="ai-content">
           <div class="ai-left">
-            <img src="@/assets/robot-icon.png" alt="AI机器人" class="robot-icon" />
+            <img alt="AI机器人" class="robot-icon" src="@/assets/robot-icon.png"/>
             <div class="ai-text">
               <div style="font-size: 14px;color: #5E6C83;">科学研判、快速分诊</div>
               <div class="blue-text">针对病症提供建议</div>
@@ -44,11 +44,11 @@
       <!-- 左侧大类列表 -->
       <div class="department-categories">
         <div
-          v-for="(dept, index) in departmentList"
-          :key="dept.id"
-          class="category-item"
-          :class="{ active: selectedIndex === index }"
-          @click="selectCategory(index)"
+            v-for="(dept, index) in departmentList"
+            :key="dept.id"
+            :class="{ active: selectedIndex === index }"
+            class="category-item"
+            @click="selectCategory(index)"
         >
           {{ dept.name }}
         </div>
@@ -57,10 +57,10 @@
       <!-- 右侧科室列表 -->
       <div class="department-list">
         <div
-          v-for="subDept in currentDepartment?.children"
-          :key="subDept.id"
-          class="department-item"
-          @click="selectDepartment(subDept)"
+            v-for="subDept in currentDepartment?.children"
+            :key="subDept.id"
+            class="department-item"
+            @click="selectDepartment(subDept)"
         >
           <div class="dept-name">{{ subDept.name }}</div>
           <div class="dept-desc">{{ subDept.description }}</div>
@@ -70,11 +70,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import type { SubDepartment } from '../types/department';
+<script lang="ts" setup>
+import {computed, onMounted, ref, watch} from 'vue';
+import type {SubDepartment} from '../types/department';
 import DepartmentService from '@/api/department';
-import { useRouter } from 'vue-router';
+import {useRouter} from 'vue-router';
 
 const router = useRouter();
 
@@ -88,8 +88,8 @@ const selectedIndex = ref(0);
 const departmentList = ref<Department[]>([]);
 const search = ref('');
 
-const currentDepartment = computed(() => 
-  departmentList.value[selectedIndex.value] || null
+const currentDepartment = computed(() =>
+    departmentList.value[selectedIndex.value] || null
 );
 
 const selectCategory = (index: number) => {
@@ -124,7 +124,7 @@ const fetchDepartments = async () => {
   } catch (error) {
     console.error('获取科室列表失败:', error);
   }
-};
+}
 
 onMounted(() => {
   fetchDepartments();
@@ -136,7 +136,7 @@ onMounted(() => {
   height: 100vh;
   background-color: #f5f7fa;
   display: flex;
-    flex-direction: column;
+  flex-direction: column;
 }
 
 .search-header {
@@ -154,13 +154,13 @@ onMounted(() => {
 
 .back-button {
   font-size: 20px;
-  margin-top:10px;
+  margin-top: 10px;
 }
 
 .search-bar {
   flex: 1;
   margin: 0 12px;
-  margin-top:10px;
+  margin-top: 10px;
 }
 
 .search-bar input {
@@ -213,8 +213,8 @@ onMounted(() => {
   align-items: center;
   box-sizing: border-box;
   background-color: #F9FAFC;
-  border:1px solid #F0F1F5;
-  padding:14px;
+  border: 1px solid #F0F1F5;
+  padding: 14px;
   border-radius: 6px;
 }
 
@@ -232,7 +232,7 @@ onMounted(() => {
 
 .blue-text {
   color: #4496ED;
-  font-weight: 500; 
+  font-weight: 500;
   font-size: 14px;
 }
 
@@ -244,7 +244,7 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  width:88px;
+  width: 88px;
   height: 32px;
   box-sizing: border-box;
 }
@@ -256,7 +256,7 @@ onMounted(() => {
   height: 32px;
   display: flex;
   align-items: center;
-  padding:0px 16px;
+  padding: 0px 16px;
   box-sizing: border-box;
 }
 
@@ -310,9 +310,9 @@ onMounted(() => {
   height: 58px;
   cursor: pointer;
   transition: all 0.3s;
- display: flex;
- align-items: center;
- justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dept-name {

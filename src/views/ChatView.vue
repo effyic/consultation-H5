@@ -1,15 +1,20 @@
 <script lang="ts" setup>
 import MarkdownIt from 'markdown-it'
-import {computed, nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
+import {nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
 import {useChat} from "@/stores/chatService.ts";
+import {useRouter} from 'vue-router';
+import chat from "@/api/chat.ts";
+import { ElLoading } from 'element-plus'
 
-
+const router = useRouter();
 const chatStore = useChat();
 const md = new MarkdownIt()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
-
+const recommendDetail = ref<any>({})
+const isDialog = ref(false)
+const recommendName = ref('')
 //  聊天信息置底
 function toScrollBottom() {
   nextTick(() => {
@@ -41,14 +46,56 @@ onMounted(() => {
   })
 })
 
-watchEffect(()=>{
-  if (webSocket.historyList[webSocket.historyList.length -1]?.content) {
+watchEffect(() => {
+  if (webSocket.historyList[webSocket.historyList.length - 1]?.content) {
+    toScrollBottom()
+  }
+  if (webSocket.historyList[webSocket.historyList.length - 1]?.quick_options) {
     toScrollBottom()
   }
 })
-function more(){
+
+function more() {
   chatStore.questions()
 }
+
+function sendTag(item: any, name: string) {
+  webSocket.historyList[webSocket.historyList.length - 1].quick_options = ''
+  webSocket.sendMessage(name)
+}
+
+function backPrev() {
+  router.push('/department')
+}
+
+function backNext(id: number, name: string) {
+  recommendName.value = name
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+  chat.summary(id).then((res) => {
+    isDialog.value = true
+    loading.close()
+    recommendDetail.value = res.data
+  })
+  // router.push({
+  //   name: 'detail',
+  //   params: {id, name}
+  // })
+}
+function toDetail(){
+  let name = recommendName.value
+  let id = webSocket.chat_id
+  console.log(id,name)
+  router.push({
+    name: 'detail',
+    params: {id, name}
+  })
+  isDialog.value = false
+}
+
 onUnmounted(() => {
   if (webSocket.ws) {
     webSocket.ws.close(); // 组件销毁时关闭 WebSocket 连接
@@ -58,6 +105,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="headerTab">
+    <img alt="返回" @click="backPrev" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"/>
+    <div>智能分诊</div>
+  </div>
   <div ref="main" class="main">
     <!--    <div class="titleContainer">-->
     <!--      <svg-icon class="icon" height="18px" name="action" style="color:#676f83" width="18px"/>-->
@@ -69,7 +120,7 @@ onUnmounted(() => {
         <div class="message-wrapper">
           <div class="promptBox">
             <div class="promptHeader">
-              <img src="@/assets/user.png">
+              <img src="@/assets/logo.png">
               <div class="titleName">
                 <div>
                   Hi～我是朝阳医院智能分诊助手
@@ -83,8 +134,9 @@ onUnmounted(() => {
                 <div @click="more">换一换</div>
               </div>
               <div class="listBox">
-                <div class="problemList" v-for="(item,index) in chatStore.questionList" :key="index" @click="webSocket.sendMessage(item.question)">
-                  {{item.question}}
+                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"
+                     @click="webSocket.sendMessage(item.question)">
+                  {{ item.question }}
                 </div>
               </div>
             </div>
@@ -107,6 +159,30 @@ onUnmounted(() => {
                 <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')"/>
               </div>
             </div>
+            <div  v-if="item.role !== 'user'">
+              <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
+                   style="color:#000">
+                <p>请问您哪里有不适情况呢，情和线简单说明一下</p>
+                <div class="tagList">
+                  <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item,name)">
+                    {{ name }}
+                  </div>
+                </div>
+              </div>
+              <div v-if="item.recommended_dept?.length > 0" class="recommendBox">
+                <div class="titleName">推荐挂号科室</div>
+                <div class="detail">
+                  <div class="top">
+                    <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;">
+                    {{ item.recommended_dept }}
+                  </div>
+                  <div class="btnBox">
+                    <div class="leftBtn" @click="backNext(item.chat_id,item.recommended_dept)">自动挂号</div>
+                    <div class="rightBtn" @click="backPrev">手动挂号</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -126,11 +202,120 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    <el-dialog
+        v-model="isDialog"
+    >
+      <div class="dialogBox">
+        <img src="@/assets/success.png" style="width: 64px; height: 64px;">
+        <span>预约成功</span>
+        <div class="detailBox">
+          <img src="@/assets/detailHeaderIcon.png"  style="width:50px; height:50px;">
+          <div class="detailCont">
+            <div class="name">{{recommendName || '内心科'}}</div>
+            <p>知名专家 辛弃疾</p>
+          </div>
+        </div>
+        <div class="time" style="margin-top: 16px;">就诊时间：</div>
+        <div class="time">{{recommendDetail?.appointment_time}}</div>
+        <div class="btn" @click="toDetail">查看病情文档</div>
+      </div>
+    </el-dialog>
   </div>
 
 </template>
 
 <style lang="scss" scoped>
+.headerTab{
+  position: fixed;
+  top: 0;
+  height: 44px;
+  background: #fff;
+  width: 100vw;
+  line-height: 44px;
+  display: flex;
+  align-items: center;
+  z-index: 99;
+  div{
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%);
+    color:#000000;
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+}
+:deep(.el-dialog) {
+  width:311px !important;
+  padding: 0 !important;
+  background: transparent !important;
+
+  .el-dialog__header {
+    display: none !important;
+  }
+  .dialogBox{
+    border-radius: 20px !important;
+    height: 384px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 20px;
+    align-items: center;
+    span{
+      font-size: 18px;
+      font-weight: 500;
+      padding:16px 0 24px;
+      color:#000000;
+    }
+    .detailBox{
+      display: flex;
+      padding: 18px 16px;
+      width: 100%;
+      background:#F0F2F5;
+      border-radius: 8px;
+      align-items: center;
+      img{
+        margin-right:20px;
+      }
+      .detailCont{
+        display: flex;
+        flex-direction: column;
+        .name{
+          color:#000000D9;
+          font-size: 16px;
+          font-weight: 500;
+        }
+        p{
+          color:#000000A6;
+          font-size: 14px;
+          font-weight: 400;
+        }
+      }
+
+    }
+    .time{
+      width: 100%;
+      color:#333333;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .btn{
+      margin-top: 20px;
+      width: 151px;
+      height: 40px;
+      min-height: 40px;
+      border-radius: 100px;
+      background: #529EEE;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 500;
+      font-size: 16px;
+      color: #fff;
+    }
+  }
+}
+
 @mixin thinking-border {
   color: #57606a;
   border-left: 2px solid #989a9f;
@@ -260,10 +445,10 @@ onUnmounted(() => {
 
 .main {
   margin: 0;
+  padding-top: 44px;
   box-sizing: border-box;
   width: 100vw !important;
-  height: 100vh; /* 回退方案 */
-  height: calc(var(--vh) * 100);
+  height: calc(100vh - 44px);
   background: #E6E9EE;
 
   &.white-bg {
@@ -378,12 +563,15 @@ onUnmounted(() => {
   .dialogue::-webkit-scrollbar {
     width: 0 !important;
   }
+
   .content::-webkit-scrollbar {
     width: 0 !important;
   }
-  .message-wrapper::-webkit-scrollbar{
+
+  .message-wrapper::-webkit-scrollbar {
     display: none !important;
   }
+
   .titleContainer {
     height: 56px;
     color: #354052;
@@ -407,7 +595,7 @@ onUnmounted(() => {
 
   .dialogue {
     // height: calc(100vh - 90px); /* 回退方案 */
-    height: calc(var(--vh) * 100);
+    height: calc(100vh - 44px);
     //background:#F8F8FA;
     background-image: linear-gradient(180deg, rgba(249, 250, 251, 0.9), rgba(242, 244, 247, 0.9) 90.48%);
     //border-top-left-radius: 20px;
@@ -417,7 +605,7 @@ onUnmounted(() => {
     box-sizing: border-box;
 
     .content {
-      height: calc(var(--vh) * 100 - 90px);
+      height: calc(var(--vh) * 100 - 90px - 44px);
       overflow-y: auto;
       background-size: cover;
       padding-bottom: 20px;
@@ -453,47 +641,56 @@ onUnmounted(() => {
         min-height: 100%;
         //padding-top: 10px;
       }
-      .promptBox{
+
+      .promptBox {
         height: 282px;
         width: 100%;
         border-radius: 16px;
         color: #000;
         overflow: hidden;
         background: linear-gradient(180deg, #CAE3FF 0%, #E8F3FF 100%);
-        .promptHeader{
+
+        .promptHeader {
           display: flex;
           align-items: center;
-          padding:22px 10px;
-          img{
+          padding: 22px 10px;
+
+          img {
             width: 40px;
             height: 40px;
           }
-          .titleName{
+
+          .titleName {
             margin-left: 10px;
             white-space: nowrap;
-            div{
+
+            div {
               font-weight: 500;
-              color:#092E5C;
+              color: #092E5C;
               font-size: 20px;
             }
-            p{
+
+            p {
               font-size: 14px;
             }
           }
         }
-        .problemBox{
+
+        .problemBox {
           width: 100%;
           border-radius: 16px;
           background: #fff;
           height: 100%;
-          .problemHeader{
+
+          .problemHeader {
             display: flex;
             justify-content: space-between;
-            div:nth-child(1){
-              width:64px;
+
+            div:nth-child(1) {
+              width: 64px;
               height: 22px;
               background: linear-gradient(93.11deg, #529EEE 4.29%, #31E2F9 124.29%);
-              border-radius:16px 0 16px 0;
+              border-radius: 16px 0 16px 0;
               font-size: 12px;
               font-weight: 500;
               color: #fff;
@@ -501,16 +698,20 @@ onUnmounted(() => {
               align-items: center;
               justify-content: center;
             }
-            div:nth-child(2){
-              margin:10px 16px 0 0;
+
+            div:nth-child(2) {
+              margin: 10px 16px 0 0;
               color: #092E5C;
               font-size: 14px;
             }
           }
-          .listBox{
+
+          .listBox {
             padding: 0 16px;
             box-sizing: border-box;
-            .problemList{
+
+            .problemList {
+              white-space: nowrap;
               border-radius: 60px;
               background: #f0f2f5;
               width: 100%;
@@ -599,7 +800,7 @@ onUnmounted(() => {
             background: #529EEE4D;
             font-size: 15px;
             //color: #101828;
-            color:#000000D9;
+            color: #000000D9;
             padding: 12px 16px;
             box-sizing: border-box;
             display: inline-block;
@@ -786,6 +987,7 @@ onUnmounted(() => {
             margin: 20px 10px;
             background: #fff;
           }
+
           .isLoading::before {
             position: absolute;
             left: -10px;
@@ -797,12 +999,106 @@ onUnmounted(() => {
             right: -10px;
             animation-delay: 0.66s;
           }
+
           @keyframes pulse {
             0%, 100% {
               background-color: rgba(102, 112, 133, 0.357);
             }
             50% {
               background-color: rgba(102, 112, 133, 0.857);
+            }
+          }
+
+
+        }
+        .tagBox {
+          margin-top: 10px;
+
+          p {
+            color: #000000D9;
+            font-size: 14px;
+            font-weight: 400;
+          }
+
+          .tagList {
+            display: flex;
+            margin-top: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+            flex-wrap: wrap;
+
+            .tagName {
+              padding: 10px 14px;
+              background: #529EEE;
+              border-radius: 100px;
+              margin-right: 10px;
+              color: #FFFFFFD9;
+              font-size: 14px;
+              margin-bottom: 10px;
+            }
+          }
+
+        }
+
+        .recommendBox {
+          margin-top: 25px;
+          margin-bottom: 25px;
+          width: 325px;
+          height: 208px;
+          border-radius: 16px;
+          background: url("@/assets/recommendBg.png") no-repeat;
+          background-size: 100% 100%;
+
+          .titleName {
+            color: #FFFFFF;
+            font-weight: 500;
+            font-size: 17px;
+            padding: 16px 20px;
+          }
+
+          .detail {
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px;
+
+            .top {
+              display: flex;
+              align-items: center;
+              color: #262626;
+              font-size: 16px;
+              font-weight: 400;
+
+              img {
+                margin-right: 7px;
+              }
+            }
+
+            .btnBox {
+              display: flex;
+              width: 100%;
+              justify-content: space-between;
+              color: #000;
+              margin-top: 40px;
+
+              .leftBtn, .rightBtn {
+                width: 139px;
+                height: 40px;
+                border-radius: 100px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #529EEE;
+                font-weight: 500;
+                font-size: 16px;
+                color: #fff;
+                cursor: pointer;
+
+                &.rightBtn {
+                  background: #fff;
+                  border: 1px #529EEE solid;
+                  color: #529EEE;
+                }
+              }
             }
           }
         }
@@ -843,6 +1139,7 @@ onUnmounted(() => {
     bottom: 15px;
     left: 16px;
     z-index: 10;
+
     .audioPlaying {
       // display: flex;
       // align-items: center;
