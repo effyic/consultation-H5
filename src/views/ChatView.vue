@@ -110,11 +110,6 @@ onUnmounted(() => {
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
-    <!--    <div class="titleContainer">-->
-    <!--      <svg-icon class="icon" height="18px" name="action" style="color:#676f83" width="18px"/>-->
-    <!--      <div class="titleName">身心医院智能AI问诊辅助系统</div>-->
-    <!--      <svg-icon class="icon" height="18px" name="more" style="color:#676f83" width="18px"/>-->
-    <!--    </div>-->
     <div class="dialogue">
       <div ref="messageCont" class="content">
         <div class="message-wrapper">
@@ -128,16 +123,23 @@ onUnmounted(() => {
                 <p>我已解答108万+问题，有什么需要我帮你的？</p>
               </div>
             </div>
-            <div class="problemBox">
-              <div class="problemHeader">
-                <div>常见问题</div>
-                <div @click="more">换一换</div>
-              </div>
-              <div class="listBox">
-                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"
-                     @click="webSocket.sendMessage(item.question)">
-                  {{ item.question }}
-                </div>
+<!--            <div class="problemBox">-->
+<!--              <div class="problemHeader">-->
+<!--                <div>常见问题</div>-->
+<!--                <div @click="more">换一换</div>-->
+<!--              </div>-->
+<!--              <div class="listBox">-->
+<!--                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"-->
+<!--                     @click="webSocket.sendMessage(item.question)">-->
+<!--                  {{ item.question }}-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </div>-->
+          </div>
+          <div class="responseCont" style="margin-top: 20px">
+            <div  class="chatAnswer">
+              <div class="chatTxt">
+                <div v-html="md.render('请问您哪里有不适情况呢，请和我简单说明一下')"/>
               </div>
             </div>
           </div>
@@ -162,7 +164,7 @@ onUnmounted(() => {
             <div  v-if="item.role !== 'user'">
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
                    style="color:#000">
-                <p>请问您哪里有不适情况呢，情和线简单说明一下</p>
+                <p>请问您哪里有不适情况呢，请和我简单说明一下</p>
                 <div class="tagList">
                   <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item,name)">
                     {{ name }}
@@ -643,7 +645,7 @@ onUnmounted(() => {
       }
 
       .promptBox {
-        height: 282px;
+        //height: 282px;
         width: 100%;
         border-radius: 16px;
         color: #000;
@@ -672,6 +674,7 @@ onUnmounted(() => {
 
             p {
               font-size: 14px;
+              //font-size: 13px;
             }
           }
         }
