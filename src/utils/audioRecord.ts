@@ -42,7 +42,7 @@ export class AudioRecorder{
                 this.setState(jsonData.state)
             }
 
-            // tts start 停止录音
+            // tts start 停止录音，发送speaking状态
             if (jsonData.type === 'tts') {
                 if (jsonData.state === 'start') {
                     this.stopRecording();
@@ -51,11 +51,24 @@ export class AudioRecorder{
                 }
 
                 if (jsonData.state === 'stop') {
-                    if (!this.isPlaying && this.audioQueue.length === 0) {
-                        this.ws?.send(JSON.stringify({ type: "state", state: "listening" }));
-                        this.startRecording();
-                    }
+                    // if (!this.isPlaying && this.audioQueue.length === 0) {
+                    //     this.ws?.send(JSON.stringify({ type: "state", state: "listening" }));
+                    //     this.startRecording();
+                    // }
+                    
+                    // 使用 setTimeout 确保所有音频播放完成
+                    const checkAudioComplete = () => {
+                        if (!this.isPlaying && this.audioQueue.length === 0) {
+                            this.ws?.send(JSON.stringify({ type: "state", state: "listening" }));
+                            this.startRecording();
+                        } else {
+                            setTimeout(checkAudioComplete, 100); // 每100ms检查一次
+                        }
+                    };
+                    
+                    setTimeout(checkAudioComplete, 500); // 延迟500ms开始检查
                 }
+                // 结束
             }
 
             // 播放音频数据
