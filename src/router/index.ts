@@ -36,6 +36,11 @@ const router = createRouter({
             name: 'detail',
             component: () => import('@/views/DetailView.vue'),
         },
+        {
+          path: '/voiceAssistant',
+          name: 'voiceAssistant',
+          component: () => import('@/views/VoiceAssistantView.vue'),
+      },
     ],
 })
 
