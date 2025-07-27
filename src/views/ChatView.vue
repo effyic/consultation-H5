@@ -6,6 +6,7 @@ import {useChat} from "@/stores/chatService.ts";
 import {useRouter} from 'vue-router';
 import chat from "@/api/chat.ts";
 import { ElLoading } from 'element-plus'
+import voiceInput from './components/VoiceInput.vue'
 
 const router = useRouter();
 const chatStore = useChat();
@@ -15,6 +16,9 @@ const messageCont = ref<any>(null)
 const recommendDetail = ref<any>({})
 const isDialog = ref(false)
 const recommendName = ref('')
+const visualizerRef = ref();
+const isVoice = ref(false)
+
 //  聊天信息置底
 function toScrollBottom() {
   nextTick(() => {
@@ -102,6 +106,18 @@ onUnmounted(() => {
   }
 })
 
+const handleStart = () => {
+  isVoice.value = true
+  visualizerRef.value.start();
+  visualizerRef.value.setAutoSend(true)
+};
+const onTranscript = (text: string) => {
+  webSocket.sendMessage(text)
+};
+const handleStop = () => {
+  visualizerRef.value.stop();
+  isVoice.value = false
+};
 </script>
 
 <template>
@@ -191,12 +207,23 @@ onUnmounted(() => {
         <div class="defaultInputText">
           <div class="sendbox">
             <input
+                v-show="!isVoice"
                 v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
                 @keydown.enter.stop="webSocket.sendMessage(webSocket.userContext)"
             >
-            <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
-              <div class="iconWrapper">
-                <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
+            <voiceInput style="margin-bottom: 10px;" @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
+            </voiceInput>
+
+            <div v-if="isVoice" @click="handleStop" style="display: flex;align-items: center;">
+              <img style="width: 24px;margin-right: 8px;cursor: pointer;" src="@/assets/voiceStop.png" alt="">
+            </div>
+            <div style="display: flex;align-items: center;">
+              <img @click="handleStart" style="width: 24px;margin-right: 8px;cursor: pointer;"
+              src="@/assets/voiceStart.png" alt="">
+              <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
+                <div class="iconWrapper">
+                  <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
+                </div>
               </div>
             </div>
           </div>

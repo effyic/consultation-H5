@@ -10,6 +10,16 @@ class ChatApi {
     summary(id: number) {
         return apiClient.get(`chat/${id}/summary`)
     }
+
+    //语音转文字 AsrText
+    transcriptions(data: any) {
+        return apiClient.post("AsrText", data, {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            Accept: "application/json",
+        },
+        });
+    }
 }
 
 export default new ChatApi()
