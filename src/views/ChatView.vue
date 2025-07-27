@@ -245,7 +245,11 @@ const handleStop = () => {
         </div>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
         <div class="time">{{recommendDetail?.appointment_time}}</div>
-        <div class="btn" @click="toDetail">病历文档临时查看</div>
+        <div class="upLoad">点击上传过往病例或检查文档</div>
+        <div style="display: flex;">
+          <div class="bacChat" @click="isDialog = false">返回</div>
+          <div class="btn" @click="toDetail">病历文档临时查看</div>
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -283,7 +287,6 @@ const handleStop = () => {
   }
   .dialogBox{
     border-radius: 20px !important;
-    height: 384px;
     background: #fff;
     display: flex;
     flex-direction: column;
@@ -319,7 +322,6 @@ const handleStop = () => {
           font-weight: 400;
         }
       }
-
     }
     .time{
       width: 100%;
@@ -327,8 +329,31 @@ const handleStop = () => {
       font-size: 14px;
       font-weight: 500;
     }
+    .upLoad{
+      margin-top: 6px;
+      width: 100%;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(82, 158, 238, 0.8);
+    }
+    .bacChat{
+      margin-top: 10px;
+      height: 40px;
+      padding:0 20px;
+      margin-right: 20px;
+      min-height: 40px;
+      border-radius: 100px;
+      background: #fff;
+      border:1px #529EEE solid;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 500;
+      font-size: 16px;
+      color: #333333;
+    }
     .btn{
-      margin-top: 20px;
+      margin-top: 10px;
       width: 151px;
       height: 40px;
       min-height: 40px;
