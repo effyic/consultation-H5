@@ -32,7 +32,7 @@ const router = createRouter({
             component: () => import('@/views/HospitalView.vue'),
         },
         {
-            path: '/detail/:id/:name',
+            path: '/detail/:id/:name/:data',
             name: 'detail',
             component: () => import('@/views/DetailView.vue'),
         },

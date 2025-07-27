@@ -8,8 +8,12 @@ const router = useRouter();
 const chat_id = ref(0)
 const recommendDetail = ref<any>({})
 const name = ref('')
-
+const caseList = ref<any>()
 onMounted(() => {
+  if(route.params?.data){
+    let data:any = route.params.data
+    caseList.value = JSON.parse(data)
+  }
     if(Number(route.params.id) == 0) {
       recommendDetail.value.appointment_time = route.params.name
     }else {
@@ -20,7 +24,7 @@ onMounted(() => {
 })
 
 function back(){
-  router.push('/Department')
+  router.push('/chat')
 }
 
 function getDetail() {
@@ -60,16 +64,16 @@ function getDetail() {
         <div>{{ recommendDetail?.description || '无' }}</div>
       </div>
       <div class="label">即往史：
-        <div>{{ recommendDetail?.past_history || '无' }}</div>
+        <div>{{ caseList?.past_history || '无' }}</div>
       </div>
       <div class="label">过敏史：
-        <div>{{ recommendDetail?.allergy_history || '无' }}</div>
+        <div>{{ caseList?.allergy_history || '无' }}</div>
       </div>
       <div class="label">家族史：
-        <div>{{ recommendDetail?.family_history || '无' }}</div>
+        <div>{{ caseList?.family_history || '无' }}</div>
       </div>
     </div>
-    <div v-if="recommendDetail?.chat_file">
+    <div v-if="recommendDetail.chat_file && recommendDetail.chat_file.length >0">
       <div style="color:#333;margin-top: 16px">过往病例:</div>
       <div class="summaryBox" style="margin-top: 10px;padding-bottom: 20px">
        <div class="imgBox">

@@ -16,11 +16,15 @@ const md = new MarkdownIt()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
 const recommendDetail = ref<any>({})
-const isDialog = ref(true)
+const isDialog = ref(false)
 const recommendName = ref('')
 const visualizerRef = ref();
 const isVoice = ref(false)
 const fileList = ref<UploadUserFile[]>([])
+const isMedicalHistory = ref(false)
+const past_history = ref('')
+const allergy_history = ref('')
+const family_history = ref('')
 
 //  聊天信息置底
 function toScrollBottom() {
@@ -62,6 +66,7 @@ watchEffect(() => {
   }
   // 当有推荐科室时，停止语音输入
   if (webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
+    isMedicalHistory.value = true
     isVoice.value = false;
     visualizerRef.value?.stop();
     toScrollBottom()
@@ -103,10 +108,14 @@ async function toDetail() {
   if (fileList.value.length === 0) {
     let name = recommendName.value
     let id = webSocket.chat_id
-    console.log(id, name)
+    let data = JSON.stringify({
+      past_history:past_history.value,
+      allergy_history:allergy_history.value,
+      family_history:family_history.value,
+    })
     router.push({
       name: 'detail',
-      params: {id, name}
+      params: {id, name,data}
     })
     isDialog.value = false
   } else {
@@ -116,16 +125,15 @@ async function toDetail() {
     })
     try {
       await axios.post(`http://172.16.1.24:30137/api/chat/${webSocket.chat_id}/upload`, formData, {
-            headers: {'Content-Type': 'multipart/form-data'}
-          })
+        headers: {'Content-Type': 'multipart/form-data'}
+      })
       ElMessage.success('上传成功！')
       const name = recommendName.value
       const id = webSocket.chat_id
-      console.log(id, name)
 
       router.push({
         name: 'detail',
-        params: { id, name }
+        params: {id, name}
       })
       isDialog.value = false
 
@@ -172,17 +180,6 @@ const beforeUpload = (file: File) => {
 // 自定义上传逻辑
 const httpRequest = async (option: any) => {
   return
-  // const formData = new FormData()
-  // formData.append('files', option.file)
-  // try {
-  //   let res = await axios.post(`http://172.16.1.24:30137/api/chat/${webSocket.chat_id}/upload`, formData, {
-  //     headers: {'Content-Type': 'multipart/form-data'}
-  //   })
-  //   ElMessage.success('上传成功')
-  // } catch (error) {
-  //   console.error(error)
-  //   ElMessage.error('上传失败')
-  // }
 }
 const isImage = (file: any) => {
   const type = file.raw?.type || file.type
@@ -261,12 +258,32 @@ const removeFile = (index: number) => {
                   </div>
                 </div>
               </div>
-              <div v-if="item.recommended_dept?.length > 0" class="recommendBox">
+              <div class="recommendBox" v-if="item.recommended_dept?.length > 0">
                 <div class="titleName">推荐挂号科室</div>
                 <div class="detail">
+                  <div style="display:flex;width: 100%;align-items: center;color:#000">
+                    <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;margin-right: 10px;">
+                    {{ item.recommended_dept || '无' }}
+                  </div>
                   <div class="top">
-                    <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;">
-                    {{ item.recommended_dept }}
+                    <div class="isHistoryBox">
+                      <div class="title">
+                        请问您是否有既往史，过敏史，家族史，如果有请在下方输入框中填写后点击确认，如果没有直接点击自动挂号即可
+                      </div>
+                      <div class="inputBox">
+                        <div class="label">既往史：</div>
+                        <el-input v-model="past_history" placeholder="请输入" type="text"/>
+                      </div>
+                      <div class="inputBox">
+                        <div class="label">过敏史：</div>
+                        <el-input v-model="allergy_history" placeholder="请输入" type="text"/>
+                      </div>
+                      <div class="inputBox">
+                        <div class="label">家族史：</div>
+                        <el-input v-model="family_history" placeholder="请输入" type="text"/>
+                      </div>
+<!--                      <div class="btn" @click="isMedicalHistory = false">确定</div>-->
+                    </div>
                   </div>
                   <div class="btnBox">
                     <div class="leftBtn" @click="backNext(item.chat_id,item.recommended_dept)">自动挂号</div>
@@ -286,14 +303,14 @@ const removeFile = (index: number) => {
                 v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
                 @keydown.enter.stop="webSocket.sendMessage(webSocket.userContext)"
             >
-            <voiceInput @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
+            <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
             </voiceInput>
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
               <img alt="" src="@/assets/voiceStop.png" style="width: 24px;margin-right: 8px;cursor: pointer;">
             </div>
-            <div style="display: flex;align-items: center;" v-else>
-              <img @click="handleStart" style="width: 24px;margin-right: 8px;cursor: pointer;"
-              src="@/assets/voiceStart.png" alt="">
+            <div v-else style="display: flex;align-items: center;">
+              <img alt="" src="@/assets/voiceStart.png"
+                   style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
               <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
                 <div class="iconWrapper">
                   <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
@@ -1247,6 +1264,7 @@ const removeFile = (index: number) => {
               font-size: 14px;
               margin-bottom: 10px;
             }
+
           }
 
         }
@@ -1255,7 +1273,7 @@ const removeFile = (index: number) => {
           margin-top: 25px;
           margin-bottom: 25px;
           width: 325px;
-          height: 208px;
+          min-height: 208px;
           border-radius: 16px;
           background: url("@/assets/recommendBg.png") no-repeat;
           background-size: 100% 100%;
@@ -1270,17 +1288,54 @@ const removeFile = (index: number) => {
           .detail {
             display: flex;
             flex-direction: column;
-            padding: 20px 20px;
-
+            padding: 0 20px 20px;
+            box-sizing: border-box;
             .top {
               display: flex;
               align-items: center;
+              flex-direction: column;
               color: #262626;
               font-size: 16px;
               font-weight: 400;
 
               img {
                 margin-right: 7px;
+              }
+
+              .isHistoryBox {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-content: center;
+                font-size: 12px;
+                //margin-top: 10px;
+                padding-top: 20px;
+
+                .inputBox {
+                  white-space: nowrap;
+                  display: flex;
+                  font-size: 14px;
+                  align-items: center;
+                  margin-bottom: 10px;
+
+                  &:nth-last-child(1) {
+                    margin-bottom: 0;
+                  }
+                }
+
+                .btn {
+                  display: flex;
+                  width: 60px;
+                  align-items: center;
+                  border-radius: 100px;
+                  justify-content: center;
+                  color: #fff;
+                  font-size: 12px;
+                  font-weight: 500;
+                  background: #529EEE;
+                  padding: 6px 10px;
+                  margin: 0 auto;
+                }
               }
             }
 
@@ -1289,7 +1344,7 @@ const removeFile = (index: number) => {
               width: 100%;
               justify-content: space-between;
               color: #000;
-              margin-top: 40px;
+              margin-top: 10px;
 
               .leftBtn, .rightBtn {
                 width: 139px;
