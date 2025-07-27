@@ -10,9 +10,13 @@ const recommendDetail = ref<any>({})
 const name = ref('')
 
 onMounted(() => {
-  chat_id.value = Number(route.params.id)
-  name.value = route.params.name.toString()
-  getDetail()
+    if(Number(route.params.id) == 0) {
+      recommendDetail.value.appointment_time = route.params.name
+    }else {
+      chat_id.value = Number(route.params.id)
+      name.value = route.params.name.toString()
+      getDetail()
+    }
 })
 
 function back(){

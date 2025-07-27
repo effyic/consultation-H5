@@ -4,16 +4,16 @@ import {showToast} from "vant";
 
 export const useWebSocket = defineStore('webSocket', () => {
         const userContext = ref('')
-        const historyList: any = ref<any>([]) // 问答数组
         let ws: any = null // WebSocket 实例
         let reconnectTimeout: any = null // 重连超时控制
         const chat_id = ref(0)
+        const historyList = ref<any>([]) // 问答数组
         const hospital_id = ref<any>(1)
         const isReplying = ref(false)
 
         const connectWebSocket = () => {
-            // ws = new WebSocket('ws://172.16.1.24:30137/api/chat/ws')
-            ws = new WebSocket('ws://192.168.0.160:8080/api/chat/ws')
+            ws = new WebSocket('ws://172.16.1.24:30137/api/chat/ws')
+            // ws = new WebSocket('ws://192.168.0.160:8080/api/chat/ws')
             ws.onopen = () => {
                 console.log('连接建立')
             }
