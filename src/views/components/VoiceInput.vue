@@ -69,11 +69,13 @@
   
   const uploadAudioAndGetTranscript = async (blob) => {
     const formData = new FormData();
-    formData.append('file', blob, 'recording.webm');
-  
+    // 根据实际的音频格式设置文件扩展名
+    const extension = blob.type.includes('webm') ? 'webm' : 'wav';
+    formData.append('file', blob, `recording.${extension}`);
+
     const response = await ChatService.transcriptions(formData);
     console.log(response);
-  
+
     return response.asr_text || '';
   };
   
@@ -175,20 +177,34 @@
   
       draw();
   
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-  
+      let options;
+      // 优先使用 webm
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options = { mimeType: 'audio/webm' };
+      } 
+      // 不支持 webm 的设备使用 wav
+      else if (MediaRecorder.isTypeSupported('audio/wav')) {
+        options = { mimeType: 'audio/wav' };
+      }
+      // 都不支持则抛出错误
+      else {
+        throw new Error('当前设备不支持录音');
+      }
+
+      mediaRecorder = new MediaRecorder(stream, options);
+
       mediaRecorder.ondataavailable = e => {
         if (e.data.size > 0) recordedChunks.push(e.data);
       };
-  
+
       mediaRecorder.onstop = async () => {
         if (recordedChunks.length === 0) {
           console.log('无录音数据');
           return;
         }
-  
-        const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-  
+
+        const audioBlob = new Blob(recordedChunks, { type: options.mimeType });
+
         try {
           const text = await uploadAudioAndGetTranscript(audioBlob);
           emit('transcript', text);
