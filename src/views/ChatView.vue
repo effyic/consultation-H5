@@ -211,13 +211,13 @@ const handleStop = () => {
                 v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
                 @keydown.enter.stop="webSocket.sendMessage(webSocket.userContext)"
             >
-            <voiceInput style="margin-bottom: 10px;" @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
+            <voiceInput @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
             </voiceInput>
 
             <div v-if="isVoice" @click="handleStop" style="display: flex;align-items: center;">
               <img style="width: 24px;margin-right: 8px;cursor: pointer;" src="@/assets/voiceStop.png" alt="">
             </div>
-            <div style="display: flex;align-items: center;">
+            <div style="display: flex;align-items: center;" v-else>
               <img @click="handleStart" style="width: 24px;margin-right: 8px;cursor: pointer;"
               src="@/assets/voiceStart.png" alt="">
               <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
