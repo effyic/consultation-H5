@@ -57,6 +57,12 @@ watchEffect(() => {
   if (webSocket.historyList[webSocket.historyList.length - 1]?.quick_options) {
     toScrollBottom()
   }
+  // 当有推荐科室时，停止语音输入
+  if (webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
+    isVoice.value = false;
+    visualizerRef.value?.stop();
+    toScrollBottom()
+  }
 })
 
 function more() {
