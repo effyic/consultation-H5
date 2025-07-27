@@ -29,7 +29,7 @@
               <div class="blue-text">针对病症提供建议</div>
             </div>
           </div>
-          <button class="ai-button" @click="router.push('/chat')">智能分诊</button>
+          <button class="ai-button" @click="toChat">智能分诊</button>
         </div>
       </div>
     </div>
@@ -67,6 +67,34 @@
         </div>
       </div>
     </div>
+    <el-dialog
+        v-model="isDialog"
+    >
+      <div class="recommendBox">
+        <div class="titleName">推荐挂号科室</div>
+        <div class="detail">
+          <div class="top">
+            <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;">
+            {{ departmentName }}
+          </div>
+          <div class="btnBox">
+            <div class="leftBtn" @click="isSuccess = true">确认挂号</div>
+            <div class="rightBtn" @click="isDialog = false">取消挂号</div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+    <el-dialog
+        v-model="isSuccess"
+    >
+      <div class="dialogBox">
+        <img src="@/assets/success.png" style="width: 64px; height: 64px;">
+        <span>预约成功</span>
+        <div class="time" style="margin-top: 16px;">就诊时间：</div>
+        <div class="time">{{appointmentTime}}</div>
+        <div class="btn" @click="toDetail">查看病情文档</div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -75,8 +103,14 @@ import {computed, onMounted, ref, watch} from 'vue';
 import type {SubDepartment} from '../types/department';
 import DepartmentService from '@/api/department';
 import {useRouter} from 'vue-router';
+import {useWebSocket} from "@/stores/websocket.ts";
 
+const websocket = useWebSocket();
 const router = useRouter();
+const isDialog = ref(false);
+const departmentName = ref('')
+const isSuccess = ref(false);
+const appointmentTime = ref('')
 
 interface Department {
   id: number;
@@ -99,6 +133,10 @@ const selectCategory = (index: number) => {
 const selectDepartment = (department: SubDepartment) => {
   // 这里可以处理科室选择后的逻辑，比如跳转到挂号页面
   console.log('选择科室:', department);
+  generateRandomAppointmentTime()
+  departmentName.value = department.name
+  isDialog.value = true;
+
 };
 
 const handleSearch = () => {
@@ -126,9 +164,66 @@ const fetchDepartments = async () => {
   }
 }
 
+function toChat() {
+  websocket.chat_id = 0
+  websocket.historyList = []
+  router.push('/chat')
+}
+
+function toDetail(){
+  let id = 0
+  let name = appointmentTime.value
+  router.push({
+    name: 'detail',
+    params: {id, name}
+  })
+  isDialog.value = false
+  isSuccess.value = false
+}
+
 onMounted(() => {
   fetchDepartments();
 });
+
+function generateRandomAppointmentTime() {
+  // 获取当前时间
+  const now = new Date();
+
+  // 生成1-7天后的随机日期
+  const daysToAdd = Math.floor(Math.random() * 7) + 1;
+  const appointmentDate = new Date(now);
+  appointmentDate.setDate(now.getDate() + daysToAdd);
+
+  // 生成9:00-18:00之间的随机时间
+  const minMinutes = 9 * 60;  // 9:00
+  const maxMinutes = 18 * 60; // 18:00
+  const randomMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes)) + minMinutes;
+
+  const hour = Math.floor(randomMinutes / 60);
+  const minute = randomMinutes % 60;
+
+  // 设置具体时间
+  const time = new Date(appointmentDate);
+  time.setHours(hour, minute, 0, 0);
+
+  // 格式化为中文格式
+  const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+  const weekday = weekdays[time.getDay()];
+
+  // 判断上午还是下午
+  let period = '上午';
+  let displayHour = hour;
+
+  if (hour >= 12) {
+    period = '下午';
+    if (hour > 12) {
+      displayHour = hour - 12;
+    }
+  }
+  appointmentTime.value = `${time.getFullYear()}年${time.getMonth() + 1}月${time.getDate()}日 ${weekday} ${period}${displayHour}:${String(minute).padStart(2, '0')}分`;
+}
+
+
 </script>
 
 <style scoped>
@@ -324,5 +419,139 @@ onMounted(() => {
 .dept-desc {
   font-size: 12px;
   color: #999;
+}
+
+:deep(.el-dialog) {
+  width: 311px !important;
+  padding: 0 !important;
+  background: transparent !important;
+
+  .el-dialog__header {
+    display: none !important;
+  }
+
+  .dialogBox{
+    border-radius: 20px !important;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 20px;
+    align-items: center;
+    span{
+      font-size: 18px;
+      font-weight: 500;
+      padding:16px 0 24px;
+      color:#000000;
+    }
+    .detailBox{
+      display: flex;
+      padding: 18px 16px;
+      width: 100%;
+      background:#F0F2F5;
+      border-radius: 8px;
+      align-items: center;
+      img{
+        margin-right:20px;
+      }
+      .detailCont{
+        display: flex;
+        flex-direction: column;
+        .name{
+          color:#000000D9;
+          font-size: 16px;
+          font-weight: 500;
+        }
+        p{
+          color:#000000A6;
+          font-size: 14px;
+          font-weight: 400;
+        }
+      }
+
+    }
+    .time{
+      width: 100%;
+      color:#333333;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .btn{
+      margin-top: 20px;
+      width: 151px;
+      height: 40px;
+      min-height: 40px;
+      border-radius: 100px;
+      background: #529EEE;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 500;
+      font-size: 16px;
+      color: #fff;
+    }
+  }
+
+  .recommendBox {
+    margin-top: 25px;
+    margin-bottom: 25px;
+    width: 325px;
+    height: 208px;
+    border-radius: 16px;
+    background: url("@/assets/recommendBg.png") no-repeat;
+    background-size: 100% 100%;
+
+    .titleName {
+      color: #FFFFFF;
+      font-weight: 500;
+      font-size: 17px;
+      padding: 16px 20px;
+    }
+
+    .detail {
+      display: flex;
+      flex-direction: column;
+      padding: 20px 20px;
+
+      .top {
+        display: flex;
+        align-items: center;
+        color: #262626;
+        font-size: 16px;
+        font-weight: 400;
+
+        img {
+          margin-right: 7px;
+        }
+      }
+
+      .btnBox {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        color: #000;
+        margin-top: 40px;
+
+        .leftBtn, .rightBtn {
+          width: 139px;
+          height: 40px;
+          border-radius: 100px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #529EEE;
+          font-weight: 500;
+          font-size: 16px;
+          color: #fff;
+          cursor: pointer;
+
+          &.rightBtn {
+            background: #fff;
+            border: 1px #529EEE solid;
+            color: #529EEE;
+          }
+        }
+      }
+    }
+  }
 }
 </style>

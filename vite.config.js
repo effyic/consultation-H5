@@ -15,8 +15,8 @@ export default defineConfig({
         port: 8080,
         proxy: {
             '/api': {
-                // target: 'http://172.16.1.24:30137',
-                target: 'http://192.168.0.160:8080/',
+                target: 'http://172.16.1.24:30137',
+                // target: 'http://192.168.0.160:8080/',
                 changeOrigin: true,
             },
         },

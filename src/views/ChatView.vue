@@ -139,7 +139,7 @@ onUnmounted(() => {
           <div class="responseCont" style="margin-top: 20px">
             <div  class="chatAnswer">
               <div class="chatTxt">
-                <div v-html="md.render('请问您哪里有不适情况呢，请和我简单说明一下')"/>
+                <div v-html="md.render('我是朝阳医院预问诊全科大夫，请问您感觉哪里不舒服呢？')"/>
               </div>
             </div>
           </div>
@@ -164,7 +164,6 @@ onUnmounted(() => {
             <div  v-if="item.role !== 'user'">
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
                    style="color:#000">
-                <p>请问您哪里有不适情况呢，请和我简单说明一下</p>
                 <div class="tagList">
                   <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item,name)">
                     {{ name }}
@@ -219,7 +218,7 @@ onUnmounted(() => {
         </div>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
         <div class="time">{{recommendDetail?.appointment_time}}</div>
-        <div class="btn" @click="toDetail">查看病情文档</div>
+        <div class="btn" @click="toDetail">病历文档临时查看</div>
       </div>
     </el-dialog>
   </div>
@@ -809,7 +808,7 @@ onUnmounted(() => {
             display: inline-block;
             border-radius: 15px;
             white-space: pre-wrap;
-            height: 48px;
+            min-height: 48px;
           }
         }
 
