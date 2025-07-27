@@ -3,14 +3,15 @@ import MarkdownIt from 'markdown-it'
 import {nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
 import {useChat} from "@/stores/chatService.ts";
-import {useRouter} from 'vue-router';
+import {useRouter,useRoute} from 'vue-router';
 import axios from "axios";
 import chat from "@/api/chat.ts";
-import type {UploadUserFile} from 'element-plus'
+import {defaultProps, type UploadUserFile} from 'element-plus'
 import {ElLoading, ElMessage} from 'element-plus'
 import voiceInput from './components/VoiceInput.vue'
 
 const router = useRouter();
+const route = useRoute();
 const chatStore = useChat();
 const md = new MarkdownIt()
 const webSocket = useWebSocket()
@@ -25,6 +26,8 @@ const isMedicalHistory = ref(false)
 const past_history = ref('')
 const allergy_history = ref('')
 const family_history = ref('')
+const isShowDialog = ref(false)
+
 
 //  聊天信息置底
 function toScrollBottom() {
@@ -41,6 +44,9 @@ function removeSpaceAfterNumber(str: any) {
 }
 
 onMounted(() => {
+  if(webSocket.historyList.length>0){
+    isShowDialog.value = true
+  }
   chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
@@ -104,15 +110,17 @@ function backNext(id: number, name: string) {
   // })
 }
 
+
 async function toDetail() {
+  isShowDialog.value = true
+  let data = JSON.stringify({
+    past_history:past_history.value,
+    allergy_history:allergy_history.value,
+    family_history:family_history.value,
+  })
   if (fileList.value.length === 0) {
     let name = recommendName.value
     let id = webSocket.chat_id
-    let data = JSON.stringify({
-      past_history:past_history.value,
-      allergy_history:allergy_history.value,
-      family_history:family_history.value,
-    })
     router.push({
       name: 'detail',
       params: {id, name,data}
@@ -124,7 +132,7 @@ async function toDetail() {
       formData.append('files', file.raw!) // file.raw 是 UploadRawFile
     })
     try {
-      await axios.post(`http://172.16.1.24:30137/api/chat/${webSocket.chat_id}/upload`, formData, {
+      await axios.post(`https://cyh.effyic.com/api/chat/${webSocket.chat_id}/upload`, formData, {
         headers: {'Content-Type': 'multipart/form-data'}
       })
       ElMessage.success('上传成功！')
@@ -133,10 +141,9 @@ async function toDetail() {
 
       router.push({
         name: 'detail',
-        params: {id, name}
+        params: {id, name,data}
       })
       isDialog.value = false
-
     } catch (err) {
       ElMessage.error('上传失败，请稍后重试')
     }
@@ -258,7 +265,7 @@ const removeFile = (index: number) => {
                   </div>
                 </div>
               </div>
-              <div class="recommendBox" v-if="item.recommended_dept?.length > 0">
+              <div class="recommendBox" v-if="item.recommended_dept?.length > 0 && !isShowDialog">
                 <div class="titleName">推荐挂号科室</div>
                 <div class="detail">
                   <div style="display:flex;width: 100%;align-items: center;color:#000">

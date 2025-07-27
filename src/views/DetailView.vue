@@ -2,6 +2,7 @@
 import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router';
 import chat from "@/api/chat.ts";
+import {ElLoading} from "element-plus";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,18 +25,23 @@ onMounted(() => {
 })
 
 function back(){
-  router.push('/chat')
+  router.back()
 }
 
 function getDetail() {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
   chat.summary(chat_id.value).then((res) => {
     recommendDetail.value = res.data
     if(res.data.chat_file){
       res.data.chat_file.forEach((item:any)=>{
-        item.file_url = 'http://172.16.1.24:30137/api/' + item.file_url
+        item.file_url = 'https://cyh.effyic.com/api/' + item.file_url
       })
     }
-    console.log(res)
+    loading.close()
   })
 }
 </script>
