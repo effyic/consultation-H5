@@ -24,8 +24,8 @@
   const SMOOTHNESS = 0.1;
   let heights = [];
   
-  const VOLUME_THRESHOLD = 5; // 声音阈值
-  const SILENCE_DELAY = 2000; // 2秒静音
+  const VOLUME_THRESHOLD = 5; // 声音阈值:当音量超过5时，开始录音
+  const SILENCE_DELAY = 2000; // 当音量低于阈值持续 2 秒，停止录音
   
   let lastVolume = 0;
   let isRecording = false;
@@ -248,7 +248,7 @@
   <style scoped>
   .voice-visualizer {
     width: 100%;
-    height: 80px;
+    height: 48px;
     background: transparent;
   }
   

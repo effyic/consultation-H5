@@ -60,6 +60,12 @@ watchEffect(() => {
   if (webSocket.historyList[webSocket.historyList.length - 1]?.quick_options) {
     toScrollBottom()
   }
+  // 当有推荐科室时，停止语音输入
+  if (webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
+    isVoice.value = false;
+    visualizerRef.value?.stop();
+    toScrollBottom()
+  }
 })
 
 function more() {
@@ -280,15 +286,14 @@ const removeFile = (index: number) => {
                 v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
                 @keydown.enter.stop="webSocket.sendMessage(webSocket.userContext)"
             >
-            <voiceInput v-show="isVoice" ref="visualizerRef" style="margin-bottom: 10px;" @transcript="onTranscript">
+            <voiceInput @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
             </voiceInput>
-
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
               <img alt="" src="@/assets/voiceStop.png" style="width: 24px;margin-right: 8px;cursor: pointer;">
             </div>
-            <div style="display: flex;align-items: center;">
-              <img alt="" src="@/assets/voiceStart.png"
-                   style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
+            <div style="display: flex;align-items: center;" v-else>
+              <img @click="handleStart" style="width: 24px;margin-right: 8px;cursor: pointer;"
+              src="@/assets/voiceStart.png" alt="">
               <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
                 <div class="iconWrapper">
                   <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
