@@ -4,8 +4,10 @@ import {nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
 import {useChat} from "@/stores/chatService.ts";
 import {useRouter} from 'vue-router';
+import axios from "axios";
 import chat from "@/api/chat.ts";
-import { ElLoading } from 'element-plus'
+import type {UploadUserFile} from 'element-plus'
+import {ElLoading, ElMessage} from 'element-plus'
 import voiceInput from './components/VoiceInput.vue'
 
 const router = useRouter();
@@ -14,10 +16,11 @@ const md = new MarkdownIt()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
 const recommendDetail = ref<any>({})
-const isDialog = ref(false)
+const isDialog = ref(true)
 const recommendName = ref('')
 const visualizerRef = ref();
 const isVoice = ref(false)
+const fileList = ref<UploadUserFile[]>([])
 
 //  聊天信息置底
 function toScrollBottom() {
@@ -95,15 +98,43 @@ function backNext(id: number, name: string) {
   //   params: {id, name}
   // })
 }
-function toDetail(){
-  let name = recommendName.value
-  let id = webSocket.chat_id
-  console.log(id,name)
-  router.push({
-    name: 'detail',
-    params: {id, name}
-  })
-  isDialog.value = false
+
+async function toDetail() {
+  if (fileList.value.length === 0) {
+    let name = recommendName.value
+    let id = webSocket.chat_id
+    console.log(id, name)
+    router.push({
+      name: 'detail',
+      params: {id, name}
+    })
+    isDialog.value = false
+  } else {
+    const formData = new FormData()
+    fileList.value.forEach(file => {
+      formData.append('files', file.raw!) // file.raw 是 UploadRawFile
+    })
+    try {
+      await axios.post(`http://172.16.1.24:30137/api/chat/${webSocket.chat_id}/upload`, formData, {
+            headers: {'Content-Type': 'multipart/form-data'}
+          })
+      ElMessage.success('上传成功！')
+      const name = recommendName.value
+      const id = webSocket.chat_id
+      console.log(id, name)
+
+      router.push({
+        name: 'detail',
+        params: { id, name }
+      })
+      isDialog.value = false
+
+    } catch (err) {
+      ElMessage.error('上传失败，请稍后重试')
+    }
+
+
+  }
 }
 
 onUnmounted(() => {
@@ -124,11 +155,49 @@ const handleStop = () => {
   visualizerRef.value.stop();
   isVoice.value = false
 };
+
+
+// 上传前检查文件格式
+const beforeUpload = (file: File) => {
+  const isValid = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'].includes(file.type)
+  if (!isValid) {
+    ElMessage.error('只能上传 PNG、JPG、JPEG 格式的图片')
+  }
+  if (fileList.value.length > 10) {
+    ElMessage.error('最多只能上传十个文件')
+  }
+  return isValid
+}
+
+// 自定义上传逻辑
+const httpRequest = async (option: any) => {
+  return
+  // const formData = new FormData()
+  // formData.append('files', option.file)
+  // try {
+  //   let res = await axios.post(`http://172.16.1.24:30137/api/chat/${webSocket.chat_id}/upload`, formData, {
+  //     headers: {'Content-Type': 'multipart/form-data'}
+  //   })
+  //   ElMessage.success('上传成功')
+  // } catch (error) {
+  //   console.error(error)
+  //   ElMessage.error('上传失败')
+  // }
+}
+const isImage = (file: any) => {
+  const type = file.raw?.type || file.type
+  return type?.startsWith('image/')
+}
+// 删除文件
+const removeFile = (index: number) => {
+  fileList.value.splice(index, 1)
+}
 </script>
 
 <template>
   <div class="headerTab">
-    <img alt="返回" @click="backPrev" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"/>
+    <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
+         @click="backPrev"/>
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
@@ -145,21 +214,21 @@ const handleStop = () => {
                 <p>我已解答108万+问题，有什么需要我帮你的？</p>
               </div>
             </div>
-<!--            <div class="problemBox">-->
-<!--              <div class="problemHeader">-->
-<!--                <div>常见问题</div>-->
-<!--                <div @click="more">换一换</div>-->
-<!--              </div>-->
-<!--              <div class="listBox">-->
-<!--                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"-->
-<!--                     @click="webSocket.sendMessage(item.question)">-->
-<!--                  {{ item.question }}-->
-<!--                </div>-->
-<!--              </div>-->
-<!--            </div>-->
+            <!--            <div class="problemBox">-->
+            <!--              <div class="problemHeader">-->
+            <!--                <div>常见问题</div>-->
+            <!--                <div @click="more">换一换</div>-->
+            <!--              </div>-->
+            <!--              <div class="listBox">-->
+            <!--                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"-->
+            <!--                     @click="webSocket.sendMessage(item.question)">-->
+            <!--                  {{ item.question }}-->
+            <!--                </div>-->
+            <!--              </div>-->
+            <!--            </div>-->
           </div>
           <div class="responseCont" style="margin-top: 20px">
-            <div  class="chatAnswer">
+            <div class="chatAnswer">
               <div class="chatTxt">
                 <div v-html="md.render('我是朝阳医院预问诊全科大夫，请问您感觉哪里不舒服呢？')"/>
               </div>
@@ -183,7 +252,7 @@ const handleStop = () => {
                 <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')"/>
               </div>
             </div>
-            <div  v-if="item.role !== 'user'">
+            <div v-if="item.role !== 'user'">
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
                    style="color:#000">
                 <div class="tagList">
@@ -219,9 +288,8 @@ const handleStop = () => {
             >
             <voiceInput @transcript="onTranscript" v-show="isVoice" ref="visualizerRef">
             </voiceInput>
-
-            <div v-if="isVoice" @click="handleStop" style="display: flex;align-items: center;">
-              <img style="width: 24px;margin-right: 8px;cursor: pointer;" src="@/assets/voiceStop.png" alt="">
+            <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
+              <img alt="" src="@/assets/voiceStop.png" style="width: 24px;margin-right: 8px;cursor: pointer;">
             </div>
             <div style="display: flex;align-items: center;" v-else>
               <img @click="handleStart" style="width: 24px;margin-right: 8px;cursor: pointer;"
@@ -243,15 +311,41 @@ const handleStop = () => {
         <img src="@/assets/success.png" style="width: 64px; height: 64px;">
         <span>预约成功</span>
         <div class="detailBox">
-          <img src="@/assets/detailHeaderIcon.png"  style="width:50px; height:50px;">
+          <img src="@/assets/detailHeaderIcon.png" style="width:50px; height:50px;">
           <div class="detailCont">
-            <div class="name">{{recommendName || '内心科'}}</div>
+            <div class="name">{{ recommendName || '内心科' }}</div>
             <p>知名专家 辛弃疾</p>
           </div>
         </div>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
-        <div class="time">{{recommendDetail?.appointment_time}}</div>
-        <div class="upLoad">点击上传过往病例或检查文档</div>
+        <div class="time">{{ recommendDetail?.appointment_time }}</div>
+        <el-upload
+            v-if="fileList.length < 10"
+            v-model:file-list="fileList"
+            :auto-upload="false"
+            :before-upload="beforeUpload"
+            :http-request="httpRequest"
+            :limit="10"
+            :show-file-list="false"
+            accept=".png,.jpg,.jpeg,.pdf"
+            class="upload-demo"
+            multiple
+            style="width: 100%"
+        >
+          <div class="upLoad">点击上传过往病例或检查文档</div>
+        </el-upload>
+        <div class="imgBox">
+          <div v-for="(item,index) in fileList" class="imgList">
+            <div class="imgDetail">
+              <img v-if="isImage(item?.raw)" src="@/assets/fileIcon.png" style="width:40px; height:40px;">
+              <img v-else src="@/assets/pdf.png" style="width:40px; height:40px;">
+              <div class="name">{{ item.name }}</div>
+              <div class="del">
+                <img src="@/assets/del.png" style="width:32px; height:32px;" @click="removeFile(index)">
+              </div>
+            </div>
+          </div>
+        </div>
         <div style="display: flex;">
           <div class="bacChat" @click="isDialog = false">返回</div>
           <div class="btn" @click="toDetail">病历文档临时查看</div>
@@ -263,7 +357,7 @@ const handleStop = () => {
 </template>
 
 <style lang="scss" scoped>
-.headerTab{
+.headerTab {
   position: fixed;
   top: 0;
   height: 44px;
@@ -273,84 +367,96 @@ const handleStop = () => {
   display: flex;
   align-items: center;
   z-index: 99;
-  div{
+
+  div {
     position: absolute;
     left: 50%;
     transform: translate(-50%);
-    color:#000000;
+    color: #000000;
     font-size: 17px;
     font-weight: 500;
   }
 
 }
+
 :deep(.el-dialog) {
-  width:311px !important;
+  width: 311px !important;
   padding: 0 !important;
   background: transparent !important;
 
   .el-dialog__header {
     display: none !important;
   }
-  .dialogBox{
+
+  .dialogBox {
     border-radius: 20px !important;
     background: #fff;
     display: flex;
     flex-direction: column;
     padding: 32px 20px;
     align-items: center;
-    span{
+
+    span {
       font-size: 18px;
       font-weight: 500;
-      padding:16px 0 24px;
-      color:#000000;
+      padding: 16px 0 24px;
+      color: #000000;
     }
-    .detailBox{
+
+    .detailBox {
       display: flex;
       padding: 18px 16px;
       width: 100%;
-      background:#F0F2F5;
+      background: #F0F2F5;
       border-radius: 8px;
       align-items: center;
-      img{
-        margin-right:20px;
+
+      img {
+        margin-right: 20px;
       }
-      .detailCont{
+
+      .detailCont {
         display: flex;
         flex-direction: column;
-        .name{
-          color:#000000D9;
+
+        .name {
+          color: #000000D9;
           font-size: 16px;
           font-weight: 500;
         }
-        p{
-          color:#000000A6;
+
+        p {
+          color: #000000A6;
           font-size: 14px;
           font-weight: 400;
         }
       }
     }
-    .time{
+
+    .time {
       width: 100%;
-      color:#333333;
+      color: #333333;
       font-size: 14px;
       font-weight: 500;
     }
-    .upLoad{
+
+    .upLoad {
       margin-top: 6px;
       width: 100%;
       font-size: 14px;
       font-weight: 500;
       color: rgba(82, 158, 238, 0.8);
     }
-    .bacChat{
+
+    .bacChat {
       margin-top: 10px;
       height: 40px;
-      padding:0 20px;
+      padding: 0 20px;
       margin-right: 20px;
       min-height: 40px;
       border-radius: 100px;
       background: #fff;
-      border:1px #529EEE solid;
+      border: 1px #529EEE solid;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -358,7 +464,8 @@ const handleStop = () => {
       font-size: 16px;
       color: #333333;
     }
-    .btn{
+
+    .btn {
       margin-top: 10px;
       width: 151px;
       height: 40px;
@@ -371,6 +478,49 @@ const handleStop = () => {
       font-weight: 500;
       font-size: 16px;
       color: #fff;
+    }
+  }
+}
+
+.imgBox {
+  display: flex;
+  flex-wrap: wrap;
+  white-space: nowrap;
+  width: 100%;
+
+  .imgList {
+    display: flex;
+
+    .imgDetail {
+      display: flex;
+      flex-direction: column;
+      width: 40px;
+      flex-wrap: wrap;
+      position: relative;
+      justify-content: center;
+      align-items: center;
+      margin-right: 4px;
+      margin-bottom: 4px;
+
+      .name {
+        width: 100%;
+        font-size: 12px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .del {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
     }
   }
 }
@@ -1071,6 +1221,7 @@ const handleStop = () => {
 
 
         }
+
         .tagBox {
           margin-top: 10px;
 

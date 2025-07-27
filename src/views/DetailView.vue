@@ -26,6 +26,11 @@ function back(){
 function getDetail() {
   chat.summary(chat_id.value).then((res) => {
     recommendDetail.value = res.data
+    if(res.data.chat_file){
+      res.data.chat_file.forEach((item:any)=>{
+        item.file_url = 'http://172.16.1.24:30137/api/' + item.file_url
+      })
+    }
     console.log(res)
   })
 }
@@ -44,15 +49,15 @@ function getDetail() {
 <!--        <p>知名专家 辛弃疾</p>-->
 <!--      </div>-->
 <!--    </div>-->
-    <div class="summaryBox">
+    <div class="summaryBox" style="margin-top: 16px">
       <div class="label">就诊时间：
         <div style="color:#529EEE;">{{ recommendDetail?.appointment_time }}</div>
       </div>
       <div class="label">主诉：
         <div>{{ recommendDetail?.chief_complaint || '无' }}</div>
       </div>
-      <div class="label">现病况：
-        <div>{{ recommendDetail?.present_illness || '无' }}</div>
+      <div class="label">患者自述：
+        <div>{{ recommendDetail?.description || '无' }}</div>
       </div>
       <div class="label">即往史：
         <div>{{ recommendDetail?.past_history || '无' }}</div>
@@ -62,6 +67,26 @@ function getDetail() {
       </div>
       <div class="label">家族史：
         <div>{{ recommendDetail?.family_history || '无' }}</div>
+      </div>
+    </div>
+    <div v-if="recommendDetail?.chat_file">
+      <div style="color:#333;margin-top: 16px">过往病例:</div>
+      <div class="summaryBox" style="margin-top: 10px;padding-bottom: 20px">
+       <div class="imgBox">
+         <div v-for="item in recommendDetail.chat_file" :key="item.id">
+           <el-image
+               style="width: 100px; height: 100px;margin-right: 10px"
+               :src="item.file_url"
+               :zoom-rate="1.2"
+               :max-scale="7"
+               :min-scale="0.2"
+               :preview-src-list="[item.file_url]"
+               show-progress
+               :initial-index="4"
+               fit="cover"
+           />
+         </div>
+       </div>
       </div>
     </div>
   </div>
@@ -89,8 +114,9 @@ function getDetail() {
 }
 .main {
   background: #F4F5F5;
+  min-height: 100vh;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   padding:44px 20px 20px;
 
 
@@ -125,11 +151,9 @@ function getDetail() {
   }
 
   .summaryBox {
-    min-height: 212px;
     width: 100%;
     background: #fff;
     border-radius: 10px;
-    margin-top: 16px;
     display: flex;
     flex-direction: column;
     padding: 16px 10px;
@@ -140,6 +164,10 @@ function getDetail() {
       font-weight: 500;
       margin-bottom: 10px;
     }
+  }
+  .imgBox{
+    display: flex;
+    flex-wrap: wrap;
   }
 }
 </style>
