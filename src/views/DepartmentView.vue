@@ -498,7 +498,7 @@ function generateRandomAppointmentTime() {
     width: 325px;
     height: 208px;
     border-radius: 16px;
-    background: url("@/assets/recommendBg.png") no-repeat;
+    background: url("@/assets/recommendBg.jpg") no-repeat;
     background-size: 100% 100%;
 
     .titleName {
