@@ -16,6 +16,7 @@ const router = createRouter({
             // /:consultationId/:date
             path: '/chat',
             name: 'chat',
+            props: true,
             component: () => import('@/views/ChatView.vue'),
             meta: {
                 title: '智能分诊'
@@ -32,7 +33,7 @@ const router = createRouter({
             component: () => import('@/views/HospitalView.vue'),
         },
         {
-            path: '/detail/:id/:name',
+            path: '/detail/:id/:name/:data',
             name: 'detail',
             component: () => import('@/views/DetailView.vue'),
         },

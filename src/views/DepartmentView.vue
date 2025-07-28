@@ -173,9 +173,10 @@ function toChat() {
 function toDetail(){
   let id = 0
   let name = appointmentTime.value
+  let data = JSON.stringify({})
   router.push({
     name: 'detail',
-    params: {id, name}
+    params: {id, name,data}
   })
   isDialog.value = false
   isSuccess.value = false
