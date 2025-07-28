@@ -7,7 +7,7 @@ export const useWebSocket = defineStore('webSocket', () => {
         let ws: any = null // WebSocket 实例
         let reconnectTimeout: any = null // 重连超时控制
         const chat_id = ref(0)
-        const historyList = ref<any>([]) // 问答数组
+        const historyList = ref<any[]>([]) // 问答数组
         const hospital_id = ref<any>(1)
         const isReplying = ref(false)
 

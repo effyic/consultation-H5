@@ -26,7 +26,6 @@ const isMedicalHistory = ref(false)
 const past_history = ref('')
 const allergy_history = ref('')
 const family_history = ref('')
-const isShowDialog = ref(false)
 
 
 //  聊天信息置底
@@ -44,8 +43,8 @@ function removeSpaceAfterNumber(str: any) {
 }
 
 onMounted(() => {
-  if(webSocket.historyList.length>0){
-    isShowDialog.value = true
+  if(webSocket.historyList.length>0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept){
+    webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
   }
   chatStore.questions()
   nextTick(() => {
@@ -112,14 +111,13 @@ function backNext(id: number, name: string) {
 
 
 async function toDetail() {
-  isShowDialog.value = true
-  let data = JSON.stringify({
+  let data = encodeURIComponent(JSON.stringify({
     past_history:past_history.value,
     allergy_history:allergy_history.value,
     family_history:family_history.value,
-  })
+  }))
   if (fileList.value.length === 0) {
-    let name = recommendName.value
+    let name = recommendName.value || '无'
     let id = webSocket.chat_id
     router.push({
       name: 'detail',
@@ -127,24 +125,28 @@ async function toDetail() {
     })
     isDialog.value = false
   } else {
+    const loading = ElLoading.service({
+      lock: true,
+      text: '上传中',
+      background: 'rgba(0, 0, 0, 0.7)',
+    })
     const formData = new FormData()
     fileList.value.forEach(file => {
       formData.append('files', file.raw!) // file.raw 是 UploadRawFile
     })
     try {
-      await axios.post(`https://cyh.effyic.com/api/chat/${webSocket.chat_id}/upload`, formData, {
-        headers: {'Content-Type': 'multipart/form-data'}
-      })
+      await axios.post(`https://cyh.effyic.com/api/chat/${webSocket.chat_id}/upload`, formData)
       ElMessage.success('上传成功！')
-      const name = recommendName.value
+      const name = recommendName.value || '无'
       const id = webSocket.chat_id
-
+      loading.close()
       router.push({
         name: 'detail',
         params: {id, name,data}
       })
       isDialog.value = false
     } catch (err) {
+      loading.close()
       ElMessage.error('上传失败，请稍后重试')
     }
 
@@ -173,15 +175,23 @@ const handleStop = () => {
 
 
 // 上传前检查文件格式
-const beforeUpload = (file: File) => {
-  const isValid = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'].includes(file.type)
-  if (!isValid) {
-    ElMessage.error('只能上传 PNG、JPG、JPEG 格式的图片')
+const handleChange = (file: any, fileListNow: any) => {
+  const isValidType = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'].includes(file.raw?.type || '')
+  const isValidSize = (file.size || 0) / 1024 / 1024 <= 20
+
+  if (!isValidType) {
+    ElMessage.error('只能上传 PNG、JPG、JPEG、PDF 格式的文件')
+    removeFile(file)
   }
-  if (fileList.value.length > 10) {
-    ElMessage.error('最多只能上传十个文件')
+
+  if (!isValidSize) {
+    ElMessage.error('文件大小不能超过 20MB')
+    removeFile(file)
   }
-  return isValid
+}
+
+const handleExceed = () => {
+  ElMessage.error('最多只能上传十个文件')
 }
 
 // 自定义上传逻辑
@@ -195,6 +205,12 @@ const isImage = (file: any) => {
 // 删除文件
 const removeFile = (index: number) => {
   fileList.value.splice(index, 1)
+}
+const close = () =>{
+  isDialog.value = false
+  if(webSocket.historyList.length>0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept){
+    webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
+  }
 }
 </script>
 
@@ -244,9 +260,6 @@ const removeFile = (index: number) => {
               <div class="textCont">
                 <p>{{ item.content }}</p>
               </div>
-              <!--              <div class="avatar">-->
-              <!--                <img :src="UserIcon" alt="">-->
-              <!--              </div>-->
             </div>
             <!-- AI助手消息 -->
             <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i-1].type === 'chat_stream' }"
@@ -265,18 +278,23 @@ const removeFile = (index: number) => {
                   </div>
                 </div>
               </div>
-              <div class="recommendBox" v-if="item.recommended_dept?.length > 0 && !isShowDialog">
-                <div class="titleName">推荐挂号科室</div>
-                <div class="detail">
-                  <div style="display:flex;width: 100%;align-items: center;color:#000">
-                    <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;margin-right: 10px;">
+              <div v-if="item.recommended_dept?.length > 0" style="margin-top: 24px"
+                   class="chatAnswer">
+                <div class="chatTxt">
+                  <div v-html="md.render('请问您是否有既往史，过敏史，家族史，如果有您可在下方输入框中填写后再点击挂号。')"/>
+                </div>
+              </div>
+              <div class="recommendBox" v-if="item.recommended_dept?.length > 0">
+                <div class="titleName">
+                  推荐挂号科室
+                  <div style="display:flex;width: 100%;align-items: center;color:#FFF;font-size: 16px;margin-top: 6px;">
+                    <img src="@/assets/recommendIcon.png" style="width: 16px; height: 16px;margin-right: 10px;">
                     {{ item.recommended_dept || '无' }}
                   </div>
+                </div>
+                <div class="detail">
                   <div class="top">
                     <div class="isHistoryBox">
-                      <div class="title">
-                        请问您是否有既往史，过敏史，家族史，如果有请在下方输入框中填写后点击确认，如果没有直接点击自动挂号即可
-                      </div>
                       <div class="inputBox">
                         <div class="label">既往史：</div>
                         <el-input v-model="past_history" placeholder="请输入" type="text"/>
@@ -289,7 +307,6 @@ const removeFile = (index: number) => {
                         <div class="label">家族史：</div>
                         <el-input v-model="family_history" placeholder="请输入" type="text"/>
                       </div>
-<!--                      <div class="btn" @click="isMedicalHistory = false">确定</div>-->
                     </div>
                   </div>
                   <div class="btnBox">
@@ -308,7 +325,7 @@ const removeFile = (index: number) => {
             <input
                 v-show="!isVoice"
                 v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
-                @keydown.enter.stop="webSocket.sendMessage(webSocket.userContext)"
+                @keydown.enter.stop="onTranscript(webSocket.userContext)"
             >
             <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
             </voiceInput>
@@ -318,7 +335,7 @@ const removeFile = (index: number) => {
             <div v-else style="display: flex;align-items: center;">
               <img alt="" src="@/assets/voiceStart.png"
                    style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
-              <div class="sendBtn" @click="webSocket.sendMessage(webSocket.userContext)">
+              <div class="sendBtn" @click="onTranscript(webSocket.userContext)">
                 <div class="iconWrapper">
                   <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
                 </div>
@@ -347,8 +364,9 @@ const removeFile = (index: number) => {
             v-if="fileList.length < 10"
             v-model:file-list="fileList"
             :auto-upload="false"
-            :before-upload="beforeUpload"
+            :on-change="handleChange"
             :http-request="httpRequest"
+            :on-exceed="handleExceed"
             :limit="10"
             :show-file-list="false"
             accept=".png,.jpg,.jpeg,.pdf"
@@ -371,7 +389,7 @@ const removeFile = (index: number) => {
           </div>
         </div>
         <div style="display: flex;">
-          <div class="bacChat" @click="isDialog = false">返回</div>
+          <div class="bacChat" @click="close">返回</div>
           <div class="btn" @click="toDetail">病历文档临时查看</div>
         </div>
       </div>
@@ -1273,30 +1291,39 @@ const removeFile = (index: number) => {
             }
 
           }
-
         }
 
         .recommendBox {
-          margin-top: 25px;
+          margin-top: 16px;
           margin-bottom: 25px;
           width: 325px;
-          min-height: 208px;
+          min-height: 322px;
           border-radius: 16px;
           background: url("@/assets/recommendBg.png") no-repeat;
           background-size: 100% 100%;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
 
           .titleName {
             color: #FFFFFF;
             font-weight: 500;
             font-size: 17px;
-            padding: 16px 20px;
+            padding: 16px 20px 0px;
           }
 
           .detail {
             display: flex;
+            background: #FFF;
             flex-direction: column;
-            padding: 0 20px 20px;
+            padding: 0 16px 20px;
+            border:2px #fff solid;
             box-sizing: border-box;
+            min-height: 236px;
+            margin: auto 0 0;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) -0.84%, #FFFFFF 109.34%);
+
             .top {
               display: flex;
               align-items: center;
@@ -1304,7 +1331,7 @@ const removeFile = (index: number) => {
               color: #262626;
               font-size: 16px;
               font-weight: 400;
-
+              width: 100%;
               img {
                 margin-right: 7px;
               }
@@ -1316,14 +1343,27 @@ const removeFile = (index: number) => {
                 align-content: center;
                 font-size: 12px;
                 //margin-top: 10px;
-                padding-top: 20px;
+                padding-top: 16px;
+                width: 100%;
 
                 .inputBox {
+                  height: 40px;
+                  padding:0 10px;
                   white-space: nowrap;
+                  background: #fff;
                   display: flex;
                   font-size: 14px;
                   align-items: center;
                   margin-bottom: 10px;
+                  border-radius: 6px;
+                  :deep(.el-input){
+                    .el-input__wrapper{
+                      border: none !important;
+                      box-shadow: unset !important;
+                    }
+                    border: none !important;
+                    box-shadow: unset !important;
+                  }
 
                   &:nth-last-child(1) {
                     margin-bottom: 0;
