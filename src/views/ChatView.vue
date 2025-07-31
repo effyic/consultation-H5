@@ -3,11 +3,10 @@ import MarkdownIt from 'markdown-it'
 import {nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
 import {useWebSocket} from "@/stores/websocket.ts";
 import {useChat} from "@/stores/chatService.ts";
-import {useRouter,useRoute} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 import axios from "axios";
 import chat from "@/api/chat.ts";
-import {defaultProps, type UploadUserFile} from 'element-plus'
-import {ElLoading, ElMessage} from 'element-plus'
+import {ElLoading, ElMessage, type UploadUserFile} from 'element-plus'
 import voiceInput from './components/VoiceInput.vue'
 
 const router = useRouter();
@@ -26,6 +25,7 @@ const isMedicalHistory = ref(false)
 const past_history = ref('')
 const allergy_history = ref('')
 const family_history = ref('')
+const isSendFlg = ref(false)
 
 
 //  聊天信息置底
@@ -43,8 +43,9 @@ function removeSpaceAfterNumber(str: any) {
 }
 
 onMounted(() => {
-  if(webSocket.historyList.length>0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept){
+  if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept.length > 0) {
     webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
+    isSendFlg.value = true
   }
   chatStore.questions()
   nextTick(() => {
@@ -87,8 +88,25 @@ function sendTag(item: any, name: string) {
   webSocket.sendMessage(name)
 }
 
-function backPrev() {
-  router.push('/department')
+function backPrev(flg: boolean) {
+  if (flg) {
+    let data = JSON.stringify({
+      past_history: past_history.value,
+      allergy_history: allergy_history.value,
+      family_history: family_history.value,
+    })
+    let name = recommendName.value || '无'
+    let id = webSocket.chat_id
+    router.push({
+      name: 'department',
+      query: {id, name, data}
+    })
+  } else {
+    router.push({
+      name: 'department',
+    })
+  }
+
 }
 
 function backNext(id: number, name: string) {
@@ -112,16 +130,16 @@ function backNext(id: number, name: string) {
 
 async function toDetail() {
   let data = encodeURIComponent(JSON.stringify({
-    past_history:past_history.value,
-    allergy_history:allergy_history.value,
-    family_history:family_history.value,
+    past_history: past_history.value,
+    allergy_history: allergy_history.value,
+    family_history: family_history.value,
   }))
   if (fileList.value.length === 0) {
     let name = recommendName.value || '无'
     let id = webSocket.chat_id
     router.push({
       name: 'detail',
-      params: {id, name,data}
+      params: {id, name, data}
     })
     isDialog.value = false
   } else {
@@ -142,7 +160,7 @@ async function toDetail() {
       loading.close()
       router.push({
         name: 'detail',
-        params: {id, name,data}
+        params: {id, name, data}
       })
       isDialog.value = false
     } catch (err) {
@@ -161,11 +179,13 @@ onUnmounted(() => {
 })
 
 const handleStart = () => {
+  // if (isSendFlg.value) return;
   isVoice.value = true
   visualizerRef.value.start();
   visualizerRef.value.setAutoSend(true)
 };
 const onTranscript = (text: string) => {
+  // if (isSendFlg.value) return;
   webSocket.sendMessage(text)
 };
 const handleStop = () => {
@@ -206,10 +226,11 @@ const isImage = (file: any) => {
 const removeFile = (index: number) => {
   fileList.value.splice(index, 1)
 }
-const close = () =>{
+const close = () => {
   isDialog.value = false
-  if(webSocket.historyList.length>0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept){
+  if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
     webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
+    // isSendFlg.value = true
   }
 }
 </script>
@@ -217,7 +238,7 @@ const close = () =>{
 <template>
   <div class="headerTab">
     <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-         @click="backPrev"/>
+         @click="backPrev(false)"/>
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
@@ -278,13 +299,15 @@ const close = () =>{
                   </div>
                 </div>
               </div>
-              <div v-if="item.recommended_dept?.length > 0" style="margin-top: 24px"
-                   class="chatAnswer">
+              <div v-if="item.recommended_dept?.length > 0" class="chatAnswer"
+                   style="margin-top: 24px">
                 <div class="chatTxt">
-                  <div v-html="md.render('请问您是否有既往史，过敏史，家族史，如果有您可在下方输入框中填写后再点击挂号。')"/>
+                  <div
+                      v-html="md.render('请问您是否有既往史，过敏史，家族史，如果有您可在下方输入框中填写后再点击挂号。')"/>
                 </div>
               </div>
-              <div class="recommendBox" v-if="item.recommended_dept?.length > 0">
+              <!--             -->
+              <div v-if="item.recommended_dept?.length > 0" class="recommendBox">
                 <div class="titleName">
                   推荐挂号科室
                   <div style="display:flex;width: 100%;align-items: center;color:#FFF;font-size: 16px;margin-top: 6px;">
@@ -311,10 +334,17 @@ const close = () =>{
                   </div>
                   <div class="btnBox">
                     <div class="leftBtn" @click="backNext(item.chat_id,item.recommended_dept)">自动挂号</div>
-                    <div class="rightBtn" @click="backPrev">手动挂号</div>
+                    <div class="rightBtn" @click="backPrev(true)">手动挂号</div>
                   </div>
                 </div>
               </div>
+<!--              <div v-if="isSendFlg" class="chatAnswer"-->
+<!--                   style="margin-top: 24px">-->
+<!--                <div class="chatTxt">-->
+<!--                  <div-->
+<!--                      v-html="md.render('感谢您的使用，您提供的信息都会传给问诊医生作为诊断参考，请按时到院进行报道问诊。')"/>-->
+<!--                </div>-->
+<!--              </div>-->
             </div>
           </div>
         </div>
@@ -324,7 +354,8 @@ const close = () =>{
           <div class="sendbox">
             <input
                 v-show="!isVoice"
-                v-model.trim="webSocket.userContext" class="sendInput" placeholder="可以提问症状用药等相关问题"
+                v-model.trim="webSocket.userContext"
+                class="sendInput" placeholder="请输入您想要咨询的问题"
                 @keydown.enter.stop="onTranscript(webSocket.userContext)"
             >
             <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
@@ -364,10 +395,10 @@ const close = () =>{
             v-if="fileList.length < 10"
             v-model:file-list="fileList"
             :auto-upload="false"
-            :on-change="handleChange"
             :http-request="httpRequest"
-            :on-exceed="handleExceed"
             :limit="10"
+            :on-change="handleChange"
+            :on-exceed="handleExceed"
             :show-file-list="false"
             accept=".png,.jpg,.jpeg,.pdf"
             class="upload-demo"
@@ -1317,7 +1348,7 @@ const close = () =>{
             background: #FFF;
             flex-direction: column;
             padding: 0 16px 20px;
-            border:2px #fff solid;
+            border: 2px #fff solid;
             box-sizing: border-box;
             min-height: 236px;
             margin: auto 0 0;
@@ -1332,6 +1363,7 @@ const close = () =>{
               font-size: 16px;
               font-weight: 400;
               width: 100%;
+
               img {
                 margin-right: 7px;
               }
@@ -1348,7 +1380,7 @@ const close = () =>{
 
                 .inputBox {
                   height: 40px;
-                  padding:0 10px;
+                  padding: 0 10px;
                   white-space: nowrap;
                   background: #fff;
                   display: flex;
@@ -1356,11 +1388,13 @@ const close = () =>{
                   align-items: center;
                   margin-bottom: 10px;
                   border-radius: 6px;
-                  :deep(.el-input){
-                    .el-input__wrapper{
+
+                  :deep(.el-input) {
+                    .el-input__wrapper {
                       border: none !important;
                       box-shadow: unset !important;
                     }
+
                     border: none !important;
                     box-shadow: unset !important;
                   }
