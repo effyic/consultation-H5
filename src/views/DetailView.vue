@@ -19,6 +19,7 @@ onMounted(() => {
     const raw = decodeURIComponent(route.params.data as string)
     caseList.value = JSON.parse(raw)
   }
+
   if (Number(route.params.id) == 0) {
     recommendDetail.value.appointment_time = route.params.name
   } else {
@@ -79,10 +80,10 @@ const isPDF = (name: any) => {
         <div>{{ recommendDetail?.present_illness || '无' }}</div>
       </div>
       <div class="label">即往史：
-        <div>{{ caseList?.past_history }}</div>
+        <div>{{ caseList?.past_history || '无' }}</div>
       </div>
       <div class="label">过敏史：
-        <div>{{ caseList?.allergy_history + '' || '无' }}</div>
+        <div>{{ caseList?.allergy_history || '无' }}</div>
       </div>
       <div class="label">家族史：
         <div>{{ caseList?.family_history || '无' }}</div>

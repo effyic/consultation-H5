@@ -92,7 +92,7 @@
         <span>预约成功</span>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
         <div class="time">{{appointmentTime}}</div>
-        <div class="btn" @click="toDetail">查看病情文档</div>
+        <div class="btn" @click="toDetail">{{chat_id == 0 ? '确认' : '查看病情文档'}}</div>
       </div>
     </el-dialog>
   </div>
@@ -102,11 +102,11 @@
 import {computed, onMounted, ref, watch} from 'vue';
 import type {SubDepartment} from '../types/department';
 import DepartmentService from '@/api/department';
-import {useRouter} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 import {useWebSocket} from "@/stores/websocket.ts";
-
 const websocket = useWebSocket();
 const router = useRouter();
+const route = useRoute();
 const isDialog = ref(false);
 const departmentName = ref('')
 const isSuccess = ref(false);
@@ -121,6 +121,9 @@ interface Department {
 const selectedIndex = ref(0);
 const departmentList = ref<Department[]>([]);
 const search = ref('');
+const caseDetail = ref<any>({})
+const chat_id = ref<any>(0)
+const recommendName = ref<any>('')
 
 const currentDepartment = computed(() =>
     departmentList.value[selectedIndex.value] || null
@@ -171,18 +174,26 @@ function toChat() {
 }
 
 function toDetail(){
-  let id = 0
-  let name = appointmentTime.value
-  let data = JSON.stringify({})
-  router.push({
-    name: 'detail',
-    params: {id, name,data}
-  })
+  let id = chat_id.value
+  let name = recommendName.value || '无'
+  let data = JSON.stringify(caseDetail.value)
+  if(id !== 0){
+    router.push({
+      name: 'detail',
+      params: {id, name,data}
+    })
+  }
   isDialog.value = false
   isSuccess.value = false
 }
 
 onMounted(() => {
+  if(route.query?.data){
+    let data:any = route.query.data
+    caseDetail.value = JSON.parse(data)
+    chat_id.value = route.query.id
+    recommendName.value = route.query.name
+  }
   fetchDepartments();
 });
 
