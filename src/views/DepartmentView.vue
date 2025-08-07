@@ -194,6 +194,7 @@ onMounted(() => {
     chat_id.value = route.query.id
     recommendName.value = route.query.name
   }
+  websocket.initialFlg = false
   fetchDepartments();
 });
 

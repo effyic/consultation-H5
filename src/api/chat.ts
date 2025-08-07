@@ -14,11 +14,16 @@ class ChatApi {
     //语音转文字 AsrText
     transcriptions(data: any) {
         return apiClient.post("AsrText", data, {
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-            Accept: "application/json",
-        },
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                Accept: "application/json",
+            },
         });
+    }
+
+    uploadHistory(id: number,data:any) {
+        return apiClient.put(`chat/${id}/3history`,data)
+
     }
 }
 

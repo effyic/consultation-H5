@@ -10,6 +10,8 @@ export const useWebSocket = defineStore('webSocket', () => {
         const historyList = ref<any[]>([]) // 问答数组
         const hospital_id = ref<any>(1)
         const isReplying = ref(false)
+        const initialFlg = ref(false)
+        const registrationTime = ref('')
 
         const connectWebSocket = () => {
             // ws://cyh.effyic.com/api/chat/ws
@@ -92,14 +94,25 @@ export const useWebSocket = defineStore('webSocket', () => {
                     chat_id: chat_id.value,
                 }
                 historyList.value.push(user)
-                let assistantData = {
-                    role: 'assistant',
-                    content: '',
+                if (initialFlg.value) {
+                    let assistantData = {
+                        role: 'assistant',
+                        content: '您的补充信息已成功传达给预约医生，请您按时前往就诊。',
+                    }
+                    historyList.value.push(assistantData)
+                    isReplying.value = false
+                    userContext.value = ''
+                } else {
+                    let assistantData = {
+                        role: 'assistant',
+                        content: '',
+                    }
+                    historyList.value.push(assistantData)
+                    ws.send(JSON.stringify(user))
+                    isReplying.value = true
+                    userContext.value = ''
                 }
-                historyList.value.push(assistantData)
-                ws.send(JSON.stringify(user))
-                isReplying.value = true
-                userContext.value = ''
+
             }
         }
         return {
@@ -107,6 +120,8 @@ export const useWebSocket = defineStore('webSocket', () => {
             ws,
             userContext,
             chat_id,
+            initialFlg,
+            registrationTime,
             connectWebSocket,
             sendMessage,
             checkConnectionStatus

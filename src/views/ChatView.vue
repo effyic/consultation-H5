@@ -46,6 +46,12 @@ onMounted(() => {
   if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept.length > 0) {
     webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
     isSendFlg.value = true
+    let assistantData = {
+      role: 'assistant',
+      content: `预约成功，就诊时间：${webSocket.registrationTime}\n\n您还有其他需要补充的信息吗？`,
+    }
+    webSocket.historyList.push(assistantData)
+    webSocket.initialFlg = true
   }
   chatStore.questions()
   nextTick(() => {
@@ -116,10 +122,20 @@ function backNext(id: number, name: string) {
     text: '加载中',
     background: 'rgba(0, 0, 0, 0.7)',
   })
+
   chat.summary(id).then((res) => {
     isDialog.value = true
     loading.close()
     recommendDetail.value = res.data
+    webSocket.registrationTime = res.data.appointment_time
+    let data = {
+      past_history:past_history.value,
+      allergy_history:allergy_history.value,
+      family_history:family_history.value,
+    }
+    chat.uploadHistory(id,data).then(res=>{
+      console.log(res)
+    })
   })
   // router.push({
   //   name: 'detail',
@@ -185,8 +201,7 @@ const handleStart = () => {
   visualizerRef.value.setAutoSend(true)
 };
 const onTranscript = (text: string) => {
-  // if (isSendFlg.value) return;
-  webSocket.sendMessage(text)
+    webSocket.sendMessage(text)
 };
 const handleStop = () => {
   visualizerRef.value.stop();
@@ -231,6 +246,13 @@ const close = () => {
   if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
     webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
     // isSendFlg.value = true
+    isSendFlg.value = true
+    let assistantData = {
+      role: 'assistant',
+      content: `预约成功，就诊时间：${webSocket.registrationTime}\n\n您还有其他需要补充的信息吗？`,
+    }
+    webSocket.historyList.push(assistantData)
+    webSocket.initialFlg = true
   }
 }
 </script>
