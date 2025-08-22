@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import MarkdownIt from 'markdown-it'
-import {nextTick, onMounted, onUnmounted, ref, watchEffect} from 'vue'
-import {useWebSocket} from "@/stores/websocket.ts";
-import {useChat} from "@/stores/chatService.ts";
-import {useRoute, useRouter} from 'vue-router';
+import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { useWebSocket } from "@/stores/websocket.ts";
+import { useChat } from "@/stores/chatService.ts";
+import { useRoute, useRouter } from 'vue-router';
 import axios from "axios";
 import chat from "@/api/chat.ts";
-import {ElLoading, ElMessage, type UploadUserFile} from 'element-plus'
-import voiceInput from './components/VoiceInput.vue'
+import { ElLoading, ElMessage, type UploadUserFile } from 'element-plus'
+import voiceInput from '@/components/VoiceInput.vue'
 
 const router = useRouter();
 const route = useRoute();
@@ -42,11 +42,9 @@ function removeSpaceAfterNumber(str: any) {
   return str.replace(/(\d+)\.\s+/g, '\$1.')
 }
 
+const isCase = ref(false)
 onMounted(() => {
-  if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept.length > 0) {
-    webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
-    isSendFlg.value = true
-  }
+
   chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
@@ -59,9 +57,34 @@ onMounted(() => {
     }
     webSocket.connectWebSocket()
     // 每隔 5 秒检查一次 WebSocket 状态
+    if (route.query.chat_id) {
+      if (route.query.isCase) {
+        isCase.value = true
+      }
+      webSocket.chat_id = parseInt(route.query.chat_id as string)
+      webSocket.step = 'collect'
+      getHistory()
+    } else {
+      webSocket.step = 'recommend'
+    }
     setInterval(webSocket.checkConnectionStatus, 5000);
   })
 })
+
+const isFirst = ref(true)
+const getHistory = () => {
+  chat.history(webSocket.chat_id).then(res => {
+    webSocket.historyList = res.data.chat.messages.filter((item: any) => item.content !== '')
+    chat.visitType(webSocket.chat_id).then(res => {
+      isFirst.value = res.data.visit_type == "first_visit"
+    })
+    if (JSON.parse(webSocket.historyList[webSocket.historyList.length - 1].metadata).recommended_dept) {
+      setTimeout(() => {
+        webSocket.finsh()
+      }, 3000)
+    }
+  })
+}
 
 watchEffect(() => {
   if (webSocket.historyList[webSocket.historyList.length - 1]?.content) {
@@ -99,7 +122,7 @@ function backPrev(flg: boolean) {
     let id = webSocket.chat_id
     router.push({
       name: 'department',
-      query: {id, name, data}
+      query: { id, name, data }
     })
   } else {
     router.push({
@@ -139,7 +162,7 @@ async function toDetail() {
     let id = webSocket.chat_id
     router.push({
       name: 'detail',
-      params: {id, name, data}
+      params: { id, name, data }
     })
     isDialog.value = false
   } else {
@@ -160,14 +183,13 @@ async function toDetail() {
       loading.close()
       router.push({
         name: 'detail',
-        params: {id, name, data}
+        params: { id, name, data }
       })
       isDialog.value = false
     } catch (err) {
       loading.close()
       ElMessage.error('上传失败，请稍后重试')
     }
-
 
   }
 }
@@ -238,43 +260,31 @@ const close = () => {
 <template>
   <div class="headerTab">
     <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-         @click="backPrev(false)"/>
+      @click="backPrev(false)" />
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
     <div class="dialogue">
+      <div class="cases" v-if="isCase">
+        <img style="width: 24px;" src="@/assets/cases1.png" alt="">
+        已传病例
+        <img style="width: 16px;" src="@/assets/cases2.png" alt="">
+      </div>
       <div ref="messageCont" class="content">
-        <div class="message-wrapper">
-          <div class="promptBox">
-            <div class="promptHeader">
-              <img src="@/assets/logo.png">
-              <div class="titleName">
-                <div>
-                  Hi～我是朝阳医院智能分诊助手
-                </div>
-                <p>我已解答108万+问题，有什么需要我帮你的？</p>
-              </div>
-            </div>
-            <!--            <div class="problemBox">-->
-            <!--              <div class="problemHeader">-->
-            <!--                <div>常见问题</div>-->
-            <!--                <div @click="more">换一换</div>-->
-            <!--              </div>-->
-            <!--              <div class="listBox">-->
-            <!--                <div v-for="(item,index) in chatStore.questionList" :key="index" class="problemList"-->
-            <!--                     @click="webSocket.sendMessage(item.question)">-->
-            <!--                  {{ item.question }}-->
-            <!--                </div>-->
-            <!--              </div>-->
-            <!--            </div>-->
-          </div>
+        <div class="message-wrapper" style="padding-top: 50px;">
+
+          <img style="width: 100%;margin-top: 10px;" src="@/assets/chatTop.png" alt="">
           <div class="responseCont" style="margin-top: 20px">
             <div class="chatAnswer">
-              <div class="chatTxt">
-                <div v-html="md.render('我是朝阳医院预问诊全科大夫，请问您感觉哪里不舒服呢？')"/>
+              <div class="chatTxt" style="max-width: 100%;">
+                <div style="color: #2386FF;margin-bottom: 20px;">您好，欢迎来到智能分诊服务～</div>
+                <div style="margin-bottom: 20px;">为了更高效地帮您办理就诊事宜，想先问一下：您本次就诊是【初诊】还是【复诊】呢？​</div>
+                <p>如果是【初诊】，我会先帮您分析您的病情信息，以便更精准地推荐就诊科室；</p>
+                <p>如果是【复诊】，您可以直接告诉我想挂号的科室和医生，我会马上为您查询号源～</p>
               </div>
             </div>
           </div>
+
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
             <div v-if="item.role == 'user'" class="infoCont">
@@ -283,68 +293,56 @@ const close = () => {
               </div>
             </div>
             <!-- AI助手消息 -->
-            <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i-1].type === 'chat_stream' }"
-                 class="chatAnswer">
+            <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
+              class="chatAnswer">
               <!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
-              <div :class="item.content === '' ? 'isLoading':'chatTxt'">
-                <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')"/>
+              <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
+                <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" />
+                <span
+                  v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
+                  style="color: #2386FF;"
+                  @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
+                  {{ isFirst ? '或上传病例材料' : '选择上传过往的病例材料' }}
+                </span>
               </div>
             </div>
             <div v-if="item.role !== 'user'">
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
-                   style="color:#000">
+                style="color:#000">
                 <div class="tagList">
-                  <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item,name)">
+                  <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item, name)">
                     {{ name }}
                   </div>
                 </div>
               </div>
-              <div v-if="item.recommended_dept?.length > 0" class="chatAnswer"
-                   style="margin-top: 24px">
-                <div class="chatTxt">
-                  <div
-                      v-html="md.render('请问您是否有既往史，过敏史，家族史，如果有您可在下方输入框中填写后再点击挂号。')"/>
+              <div v-if="item.recommended_dept" class="recommendBox">
+                <div style="font-size: 14px;color: #333333;">
+                  <span style="color: #666666;margin-right: 4px;">推荐至</span>
+                  {{ item.recommended_dept.parent.name }} {{ item.recommended_dept.name }}
                 </div>
-              </div>
-              <!--             -->
-              <div v-if="item.recommended_dept?.length > 0" class="recommendBox">
-                <div class="titleName">
-                  推荐挂号科室
-                  <div style="display:flex;width: 100%;align-items: center;color:#FFF;font-size: 16px;margin-top: 6px;">
-                    <img src="@/assets/recommendIcon.png" style="width: 16px; height: 16px;margin-right: 10px;">
-                    {{ item.recommended_dept || '无' }}
+                <div class="recommendContainer">
+                  <div class="department">
+                    科室介绍
+                    <img src="@/assets/departmentIcon.png" alt="">
                   </div>
-                </div>
-                <div class="detail">
-                  <div class="top">
-                    <div class="isHistoryBox">
-                      <div class="inputBox">
-                        <div class="label">既往史：</div>
-                        <el-input v-model="past_history" placeholder="请输入" type="text"/>
-                      </div>
-                      <div class="inputBox">
-                        <div class="label">过敏史：</div>
-                        <el-input v-model="allergy_history" placeholder="请输入" type="text"/>
-                      </div>
-                      <div class="inputBox">
-                        <div class="label">家族史：</div>
-                        <el-input v-model="family_history" placeholder="请输入" type="text"/>
+                  <div class="item">
+                    <div class="itemTitle">
+                      <img src="@/assets/recommendIcon.png">
+                      {{ item.recommended_dept.name }}
+                    </div>
+                    <div class="itemContent">
+                      <div class="info">{{ item.recommended_dept.desc }}</div>
+                      <div class="btn"
+                        @click="router.push({ path: '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept.name } })">
+                        去挂号
                       </div>
                     </div>
                   </div>
-                  <div class="btnBox">
-                    <div class="leftBtn" @click="backNext(item.chat_id,item.recommended_dept)">自动挂号</div>
-                    <div class="rightBtn" @click="backPrev(true)">手动挂号</div>
+                  <div class="msg">
+                    没有符合的科室，选择<span @click="backPrev(true)">其他科室</span>
                   </div>
                 </div>
               </div>
-<!--              <div v-if="isSendFlg" class="chatAnswer"-->
-<!--                   style="margin-top: 24px">-->
-<!--                <div class="chatTxt">-->
-<!--                  <div-->
-<!--                      v-html="md.render('感谢您的使用，您提供的信息都会传给问诊医生作为诊断参考，请按时到院进行报道问诊。')"/>-->
-<!--                </div>-->
-<!--              </div>-->
             </div>
           </div>
         </div>
@@ -352,33 +350,25 @@ const close = () => {
       <div class="Bottombox">
         <div class="defaultInputText">
           <div class="sendbox">
-            <input
-                v-show="!isVoice"
-                v-model.trim="webSocket.userContext"
-                class="sendInput" placeholder="请输入您想要咨询的问题"
-                @keydown.enter.stop="onTranscript(webSocket.userContext)"
-            >
+            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
+              style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
+            <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
+              @keydown.enter.stop="onTranscript(webSocket.userContext)">
             <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
             </voiceInput>
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
               <img alt="" src="@/assets/voiceStop.png" style="width: 24px;margin-right: 8px;cursor: pointer;">
             </div>
-            <div v-else style="display: flex;align-items: center;">
-              <img alt="" src="@/assets/voiceStart.png"
-                   style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
+            <div v-if="!isVoice" style="display: flex;align-items: center;">
               <div class="sendBtn" @click="onTranscript(webSocket.userContext)">
-                <div class="iconWrapper">
-                  <svg-icon class="icon" height="24px" name="sendIcon" style="color:#529EEE" width="24px"/>
-                </div>
+                发送
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <el-dialog
-        v-model="isDialog"
-    >
+    <el-dialog v-model="isDialog">
       <div class="dialogBox">
         <img src="@/assets/success.png" style="width: 64px; height: 64px;">
         <span>预约成功</span>
@@ -391,24 +381,13 @@ const close = () => {
         </div>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
         <div class="time">{{ recommendDetail?.appointment_time }}</div>
-        <el-upload
-            v-if="fileList.length < 10"
-            v-model:file-list="fileList"
-            :auto-upload="false"
-            :http-request="httpRequest"
-            :limit="10"
-            :on-change="handleChange"
-            :on-exceed="handleExceed"
-            :show-file-list="false"
-            accept=".png,.jpg,.jpeg,.pdf"
-            class="upload-demo"
-            multiple
-            style="width: 100%"
-        >
+        <el-upload v-if="fileList.length < 10" v-model:file-list="fileList" :auto-upload="false"
+          :http-request="httpRequest" :limit="10" :on-change="handleChange" :on-exceed="handleExceed"
+          :show-file-list="false" accept=".png,.jpg,.jpeg,.pdf" class="upload-demo" multiple style="width: 100%">
           <div class="upLoad">点击上传过往病例或检查文档</div>
         </el-upload>
         <div class="imgBox">
-          <div v-for="(item,index) in fileList" class="imgList">
+          <div v-for="(item, index) in fileList" class="imgList">
             <div class="imgDetail">
               <img v-if="isImage(item?.raw)" src="@/assets/fileIcon.png" style="width:40px; height:40px;">
               <img v-else src="@/assets/pdf.png" style="width:40px; height:40px;">
@@ -430,6 +409,25 @@ const close = () => {
 </template>
 
 <style lang="scss" scoped>
+.cases {
+  position: fixed;
+  z-index: 9;
+  top: 44px;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  font-size: 14px;
+  color: #333333;
+  padding: 0 8px;
+
+  img {
+    margin: 0 8px;
+  }
+}
+
 .headerTab {
   position: fixed;
   top: 0;
@@ -727,10 +725,9 @@ const close = () => {
 
 .main {
   margin: 0;
-  padding-top: 44px;
   box-sizing: border-box;
   width: 100vw !important;
-  height: calc(100vh - 44px);
+  height: 100vh;
   background: #E6E9EE;
 
   &.white-bg {
@@ -883,7 +880,7 @@ const close = () => {
     //border-top-left-radius: 20px;
     //border-top-right-radius: 20px;
     //padding:24px 16px;
-    padding: 16px 12px;
+    padding: 16px;
     box-sizing: border-box;
 
     .content {
@@ -1058,7 +1055,7 @@ const close = () => {
         .infoCont {
           display: flex;
           justify-content: end;
-          padding: 30px 0;
+          padding: 30px 0 0;
 
           .avatar {
             @include avatar-img;
@@ -1108,6 +1105,7 @@ const close = () => {
           }
 
           .chatTxt {
+            margin-top: 30px;
             font-size: 15px;
             background: #fff;
             color: #101828;
@@ -1117,6 +1115,7 @@ const close = () => {
             // display: flex;
             // align-items: center;
             max-width: calc(100% - 40px);
+
             // flex-direction: column;
             .webSearch {
               color: #57606a;
@@ -1284,9 +1283,12 @@ const close = () => {
           }
 
           @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
               background-color: rgba(102, 112, 133, 0.357);
             }
+
             50% {
               background-color: rgba(102, 112, 133, 0.857);
             }
@@ -1325,126 +1327,86 @@ const close = () => {
         }
 
         .recommendBox {
-          margin-top: 16px;
-          margin-bottom: 25px;
-          width: 325px;
-          min-height: 322px;
-          border-radius: 16px;
-          background: url("@/assets/recommendBg.png") no-repeat;
-          background-size: 100% 100%;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
+          width: 100%;
+          margin: 15px 0;
 
-          .titleName {
-            color: #FFFFFF;
-            font-weight: 500;
-            font-size: 17px;
-            padding: 16px 20px 0px;
-          }
+          .recommendContainer {
+            margin-top: 8px;
+            width: 100%;
+            background: #E3EFFF;
+            border-radius: 8px;
+            padding: 10px;
 
-          .detail {
-            display: flex;
-            background: #FFF;
-            flex-direction: column;
-            padding: 0 16px 20px;
-            border: 2px #fff solid;
-            box-sizing: border-box;
-            min-height: 236px;
-            margin: auto 0 0;
-            border-radius: 16px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) -0.84%, #FFFFFF 109.34%);
-
-            .top {
+            .department {
+              width: 100%;
               display: flex;
               align-items: center;
-              flex-direction: column;
-              color: #262626;
               font-size: 16px;
-              font-weight: 400;
-              width: 100%;
+              color: #333333;
+              margin-bottom: 10px;
 
               img {
-                margin-right: 7px;
+                width: 24px;
+                margin-right: 4px;
+              }
+            }
+
+            .item {
+              width: 100%;
+              background: #ffffff;
+              padding: 10px;
+              border-radius: 6px;
+
+              .itemTitle {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                color: #333;
+                margin-bottom: 7px;
+
+                img {
+                  width: 20px;
+                  margin-right: 4px;
+                }
               }
 
-              .isHistoryBox {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-content: center;
-                font-size: 12px;
-                //margin-top: 10px;
-                padding-top: 16px;
+              .itemContent {
                 width: 100%;
+                display: flex;
+                justify-content: space-between;
 
-                .inputBox {
-                  height: 40px;
-                  padding: 0 10px;
-                  white-space: nowrap;
-                  background: #fff;
-                  display: flex;
-                  font-size: 14px;
-                  align-items: center;
-                  margin-bottom: 10px;
-                  border-radius: 6px;
-
-                  :deep(.el-input) {
-                    .el-input__wrapper {
-                      border: none !important;
-                      box-shadow: unset !important;
-                    }
-
-                    border: none !important;
-                    box-shadow: unset !important;
-                  }
-
-                  &:nth-last-child(1) {
-                    margin-bottom: 0;
-                  }
+                .info {
+                  flex: 1;
+                  color: #999999;
+                  font-size: 11px;
                 }
 
                 .btn {
+                  margin-left: 16px;
+                  width: 66px;
+                  height: 24px;
                   display: flex;
-                  width: 60px;
                   align-items: center;
-                  border-radius: 100px;
                   justify-content: center;
-                  color: #fff;
-                  font-size: 12px;
-                  font-weight: 500;
-                  background: #529EEE;
-                  padding: 6px 10px;
-                  margin: 0 auto;
+                  background: #2386FF;
+                  font-size: 14px;
+                  color: #FFFFFF;
+                  border-radius: 20px;
                 }
               }
             }
 
-            .btnBox {
-              display: flex;
-              width: 100%;
-              justify-content: space-between;
-              color: #000;
+            .msg {
               margin-top: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 13px;
+              color: #999999;
 
-              .leftBtn, .rightBtn {
-                width: 139px;
-                height: 40px;
-                border-radius: 100px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #529EEE;
-                font-weight: 500;
-                font-size: 16px;
-                color: #fff;
-                cursor: pointer;
-
-                &.rightBtn {
-                  background: #fff;
-                  border: 1px #529EEE solid;
-                  color: #529EEE;
-                }
+              span {
+                color: #2386FF;
               }
             }
           }
@@ -1499,7 +1461,7 @@ const close = () => {
 
       background: linear-gradient(white, white) padding-box,
         /* 背景色 */
-      linear-gradient(90deg, #2F82FF, #05AFF8) border-box;
+        linear-gradient(90deg, #2F82FF, #05AFF8) border-box;
 
     }
 
@@ -1570,12 +1532,16 @@ const close = () => {
       }
 
       .sendBtn {
+        width: 52px;
+        height: 32px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         font-size: 13px;
-        color: #2B7DFF;
+        color: #fff;
+        background: #2B7DFF;
         font-weight: 500;
 
         &.disabled {
@@ -1596,7 +1562,8 @@ const close = () => {
           width: 24px;
           height: 24px;
           padding: 0;
-          filter: brightness(0) invert(1); /* 使图标变为白色 */
+          filter: brightness(0) invert(1);
+          /* 使图标变为白色 */
           margin-left: 4px;
         }
       }

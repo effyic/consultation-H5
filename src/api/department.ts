@@ -1,8 +1,8 @@
 import apiClient from '@/utils/request'
 
 class DepartmentService {
-  getDepartments(hospital_id: number, name: string) {
-    return apiClient.get(`departments?hospital_id=${hospital_id}&name=${name}`)
+  getDepartments(hos_code: number, name: string) {
+    return apiClient.get(`departments?hos_code=${hos_code}&name=${name}`)
   }
 }
 

@@ -15,7 +15,7 @@ export default defineConfig({
         port: 8080,
         proxy: {
             '/api': {
-                // target: 'http://172.16.1.24:30137',
+                // target: 'http://192.168.0.43:8080',
                 target: 'https://cyh.effyic.com',
                 changeOrigin: true,
             },

@@ -4,26 +4,21 @@
     <div class="search-header">
       <div class="search-header-content">
         <div class="back-button" @click="router.push('/index')">
-          <img alt="返回" src="@/assets/back.png" style="width: 24px; height: 24px;display: block"/>
+          <img alt="返回" src="@/assets/back.png" style="width: 24px; height: 24px;display: block" />
         </div>
         <div class="search-bar">
-          <input
-              v-model="search"
-              placeholder="搜索科室"
-              type="text"
-              @keyup.enter="handleSearch"
-          />
+          <input v-model="search" placeholder="搜索科室" type="text" @keyup.enter="handleSearch" />
         </div>
       </div>
       <!-- 智能分诊卡片 -->
       <div class="ai-card">
         <div class="hospital-info">
-          <img alt="朝阳医院智能分诊" class="hospital-logo" src="@/assets/hospital-logo.png"/>
+          <img alt="朝阳医院智能分诊" class="hospital-logo" src="@/assets/hospital-logo.png" />
           <span class="hospital-name" style="font-size: 14px;font-weight: 600;color: #5E6C83;">朝阳医院智能分诊</span>
         </div>
         <div class="ai-content">
           <div class="ai-left">
-            <img alt="AI机器人" class="robot-icon" src="@/assets/robot-icon.png"/>
+            <img alt="AI机器人" class="robot-icon" src="@/assets/robot-icon.png" />
             <div class="ai-text">
               <div style="font-size: 14px;color: #5E6C83;">科学研判、快速分诊</div>
               <div class="blue-text">针对病症提供建议</div>
@@ -43,33 +38,22 @@
     <div class="department-container">
       <!-- 左侧大类列表 -->
       <div class="department-categories">
-        <div
-            v-for="(dept, index) in departmentList"
-            :key="dept.id"
-            :class="{ active: selectedIndex === index }"
-            class="category-item"
-            @click="selectCategory(index)"
-        >
+        <div v-for="(dept, index) in departmentList" :key="dept.id" :class="{ active: selectedIndex === index }"
+          class="category-item" @click="selectCategory(index)">
           {{ dept.name }}
         </div>
       </div>
 
       <!-- 右侧科室列表 -->
       <div class="department-list">
-        <div
-            v-for="subDept in currentDepartment?.children"
-            :key="subDept.id"
-            class="department-item"
-            @click="selectDepartment(subDept)"
-        >
+        <div v-for="subDept in currentDepartment?.children" :key="subDept.id" class="department-item"
+          @click="selectDepartment(subDept)">
           <div class="dept-name">{{ subDept.name }}</div>
           <div class="dept-desc">{{ subDept.description }}</div>
         </div>
       </div>
     </div>
-    <el-dialog
-        v-model="isDialog"
-    >
+    <el-dialog v-model="isDialog">
       <div class="recommendBox">
         <div class="titleName">推荐挂号科室</div>
         <div class="detail">
@@ -84,26 +68,24 @@
         </div>
       </div>
     </el-dialog>
-    <el-dialog
-        v-model="isSuccess"
-    >
+    <el-dialog v-model="isSuccess">
       <div class="dialogBox">
         <img src="@/assets/success.png" style="width: 64px; height: 64px;">
         <span>预约成功</span>
         <div class="time" style="margin-top: 16px;">就诊时间：</div>
-        <div class="time">{{appointmentTime}}</div>
-        <div class="btn" @click="toDetail">{{chat_id == 0 ? '确认' : '查看病情文档'}}</div>
+        <div class="time">{{ appointmentTime }}</div>
+        <div class="btn" @click="toDetail">{{ chat_id == 0 ? '确认' : '查看病情文档' }}</div>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {computed, onMounted, ref, watch} from 'vue';
-import type {SubDepartment} from '../types/department';
+import { computed, onMounted, ref, watch } from 'vue';
+import type { SubDepartment } from '../types/department';
 import DepartmentService from '@/api/department';
-import {useRoute, useRouter} from 'vue-router';
-import {useWebSocket} from "@/stores/websocket.ts";
+import { useRoute, useRouter } from 'vue-router';
+import { useWebSocket } from "@/stores/websocket.ts";
 const websocket = useWebSocket();
 const router = useRouter();
 const route = useRoute();
@@ -126,7 +108,7 @@ const chat_id = ref<any>(0)
 const recommendName = ref<any>('')
 
 const currentDepartment = computed(() =>
-    departmentList.value[selectedIndex.value] || null
+  departmentList.value[selectedIndex.value] || null
 );
 
 const selectCategory = (index: number) => {
@@ -134,12 +116,7 @@ const selectCategory = (index: number) => {
 };
 
 const selectDepartment = (department: SubDepartment) => {
-  // 这里可以处理科室选择后的逻辑，比如跳转到挂号页面
-  console.log('选择科室:', department);
-  generateRandomAppointmentTime()
-  departmentName.value = department.name
-  isDialog.value = true;
-
+  router.push({ path: '/reserve', query: { departmentName: department.name } })
 };
 
 const handleSearch = () => {
@@ -173,14 +150,14 @@ function toChat() {
   router.push('/chat')
 }
 
-function toDetail(){
+function toDetail() {
   let id = chat_id.value
   let name = recommendName.value || '无'
   let data = JSON.stringify(caseDetail.value)
-  if(id !== 0){
+  if (id !== 0) {
     router.push({
       name: 'detail',
-      params: {id, name,data}
+      params: { id, name, data }
     })
   }
   isDialog.value = false
@@ -188,8 +165,8 @@ function toDetail(){
 }
 
 onMounted(() => {
-  if(route.query?.data){
-    let data:any = route.query.data
+  if (route.query?.data) {
+    let data: any = route.query.data
     caseDetail.value = JSON.parse(data)
     chat_id.value = route.query.id
     recommendName.value = route.query.name
@@ -442,52 +419,60 @@ function generateRandomAppointmentTime() {
     display: none !important;
   }
 
-  .dialogBox{
+  .dialogBox {
     border-radius: 20px !important;
     background: #fff;
     display: flex;
     flex-direction: column;
     padding: 32px 20px;
     align-items: center;
-    span{
+
+    span {
       font-size: 18px;
       font-weight: 500;
-      padding:16px 0 24px;
-      color:#000000;
+      padding: 16px 0 24px;
+      color: #000000;
     }
-    .detailBox{
+
+    .detailBox {
       display: flex;
       padding: 18px 16px;
       width: 100%;
-      background:#F0F2F5;
+      background: #F0F2F5;
       border-radius: 8px;
       align-items: center;
-      img{
-        margin-right:20px;
+
+      img {
+        margin-right: 20px;
       }
-      .detailCont{
+
+      .detailCont {
         display: flex;
         flex-direction: column;
-        .name{
-          color:#000000D9;
+
+        .name {
+          color: #000000D9;
           font-size: 16px;
           font-weight: 500;
         }
-        p{
-          color:#000000A6;
+
+        p {
+          color: #000000A6;
           font-size: 14px;
           font-weight: 400;
         }
       }
 
     }
-    .time{
+
+    .time {
       width: 100%;
-      color:#333333;
+      color: #333333;
       font-size: 14px;
       font-weight: 500;
     }
-    .btn{
+
+    .btn {
       margin-top: 20px;
       width: 151px;
       height: 40px;
@@ -543,7 +528,8 @@ function generateRandomAppointmentTime() {
         color: #000;
         margin-top: 40px;
 
-        .leftBtn, .rightBtn {
+        .leftBtn,
+        .rightBtn {
           width: 139px;
           height: 40px;
           border-radius: 100px;
