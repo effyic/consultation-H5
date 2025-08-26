@@ -1,281 +1,284 @@
 <template>
-  <div class="doctor-home">
-    <!-- header -->
-    <header class="header">
-      <button class="back">←</button>
-      <h1>医师主页</h1>
-      <button class="menu">⋮</button>
-    </header>
-
-    <!-- banner -->
-    <section class="banner">
-      <p class="tip">线上看诊，为健康省点时间</p>
-      <div class="info">
-        <p class="name">
-          徐立 <span class="tag">知名专家</span>
-        </p>
-        <p class="dept">北京朝阳医院常营院区 · 心内科</p>
-      </div>
-      <button class="fav">★</button>
-    </section>
-
-    <!-- doctor card -->
-    <section class="card">
-      <div class="card-top">
-        <div>
-          <p class="name">
-            徐立 <span class="tag">知名专家</span>
-          </p>
-          <p class="dept">北京朝阳医院常营院区 · 心内科</p>
-        </div>
-        <span class="score">5.0</span>
-      </div>
-      <p class="desc">
-        冠心病的临床与介入治疗。<a href="#">详情</a>
-      </p>
-    </section>
-
-    <!-- tabs -->
-    <nav class="tabs">
-      <div
-        class="tab"
-        :class="{ active: activeTab === 'intro' }"
-        @click="activeTab = 'intro'"
-      >
-        医师简介
-      </div>
-      <div
-        class="tab"
-        :class="{ active: activeTab === 'review' }"
-        @click="activeTab = 'review'"
-      >
-        患者评价
-      </div>
-      <div
-        class="tab"
-        :class="{ active: activeTab === 'qa' }"
-        @click="activeTab = 'qa'"
-      >
-        健康问答
-      </div>
-    </nav>
-
-    <!-- tab content -->
-    <section class="content">
-      <div v-if="activeTab === 'intro'">
-        <h2>医师简介</h2>
-        <p>
-          先后于浙江大学医学院、中国协和医科大学和首都医科大学求学，曾赴澳大利亚墨尔本大学、西部医院和美国克利夫兰医学中心短期进修。
-          现工作于首都医科大学附属北京朝阳医院心脏中心，主要从事冠心病的临床与介入治疗工作，系卫生部心血管介入治疗培训基地导师（冠心病介入）。
-        </p>
-        <p>
-          长期参与心血管临床和冠心病临护工作，能诊断处理大部分心血管疾病和危重急症。
-          年完成冠状动脉介入手术约400余例，无严重并发症。
-        </p>
-      </div>
-
-      <div v-else-if="activeTab === 'review'">
-        <h2>患者评价</h2>
-        <p>暂无患者评价。</p>
-      </div>
-
-      <div v-else-if="activeTab === 'qa'">
-        <h2>健康问答</h2>
-        <p>暂无健康问答。</p>
-      </div>
-    </section>
-
-    <!-- hospital info -->
-    <section class="hospital">
-      <h2>医师简介</h2>
-      <p>首都医科大学附属北京朝阳医院-常营院区 三甲</p>
-      <p>北京市朝阳区东十里堡路3号院</p>
-      <p>电话：010-85231777</p>
-    </section>
-
-    <!-- bottom button -->
-    <footer class="footer">
-      <button class="btn">预约服务</button>
-    </footer>
+  <div class="headerTab">
+    <img alt="返回" src="@/assets/back1.png" @click="goback" />
+    <div>医师主页</div>
   </div>
+  <div class="banner">
+    <div class="tip">线上看诊，为健康省点时间</div>
+    <div class="info">
+      <p class="name">
+        <span>徐立</span>知名专家
+      </p>
+      <p>北京朝阳医院常营院区 · 心内科</p>
+    </div>
+    <div class="bottom">
+      <img class="bg" src="@/assets/doctorBottom.png" alt="">
+      <div style="position: relative;z-index: 2;top: -9px;">
+        徐立
+        <div class="label">
+          知名专家
+          <img src="@/assets/evaluate.png" alt="">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="name">
+      <div class="label">三甲</div>
+      北京朝阳医院常营院区·心内科
+    </div>
+    <div class="title">
+      <div class="label">医师简介</div>
+      冠心病的临床与介入治疗。
+    </div>
+  </div>
+  <div style="height: 12px;background: #F3F3F3;"></div>
+  <van-tabs v-model:active="active">
+    <van-tab title="医师简介">
+      <div class="Introduction">
+        <div class="title">医师简介</div>
+        <div class="content">
+          <p>
+            先后于浙江大学医学院、中国协和医科大学和首都医科大学求学，曾赴澳大利亚墨尔本大学、西部医院和美国克利夫兰医学中心短期进修。
+            现工作于首都医科大学附属北京朝阳医院心脏中心，主要从事冠心病的临床与介入治疗工作，系卫生部心血管介入治疗培训基地导师（冠心病介入）。
+          </p>
+          <p>
+            长期参与心血管临床和冠心病临护工作，能诊断处理大部分心血管疾病和危重急症。
+            年完成冠状动脉介入手术约400余例，无严重并发症。
+          </p>
+        </div>
+      </div>
+    </van-tab>
+    <van-tab title="患者评价">
+
+    </van-tab>
+    <van-tab title="健康问答">
+
+    </van-tab>
+  </van-tabs>
+  <div class="submit">
+    <div class="btn"
+      @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName } })">
+      预约服务</div>
+  </div>
+
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import calendar from '@/components/calendar.vue';
 
-const activeTab = ref("intro");
+const route = useRoute()
+const router = useRouter()
+
+const active = ref(0);
+const goback = () => {
+  router.go(-1)
+}
 </script>
 
 <style lang="scss" scoped>
-.doctor-home {
-  background: #f7f8fa;
-  min-height: 100vh;
+:deep(.van-tabs__nav) {
+  border-bottom: 1px solid #F0F0F0;
+
+  .van-tabs__line {
+    width: 112px !important;
+    height: 1px !important;
+    background-color: #2386FF !important;
+  }
+}
+
+.headerTab {
+  position: fixed;
+  top: 0;
+  height: 44px;
+  background: #fff;
+  width: 100vw;
+  line-height: 44px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  z-index: 99;
 
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    background: #fff;
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
 
-    h1 {
-      font-size: 16px;
-      font-weight: bold;
+  div {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%);
+    color: #000000;
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+}
+
+.banner {
+  position: relative;
+  margin-top: 50px;
+  width: 100%;
+  height: 256px;
+  background: url('@/assets/doctorBg.png');
+  background-size: 100% 100%;
+  background-color: #F4F9FF;
+  padding: 70px 20px 0;
+
+  .tip {
+    color: #6A82A0;
+    font-size: 16px;
+  }
+
+  .info {
+    position: relative;
+    margin-top: 22px;
+    font-size: 12px;
+    color: #6A82A0;
+    padding-left: 10px;
+
+    ::after {
+      content: '';
+      width: 1px;
+      height: 32px;
+      background: #FF8E2E;
+      position: absolute;
+      left: 0;
+      top: 5px;
     }
-    button {
-      background: none;
-      border: none;
-      font-size: 18px;
+
+    .name {
+      span {
+        font-size: 14px;
+        color: #FF8E2E;
+        margin: 0 4px 2px 0;
+      }
     }
   }
 
-  .banner {
-    background: #e8f2ff;
-    padding: 16px;
-    position: relative;
+  .bottom {
+    position: absolute;
+    width: 100%;
+    height: 46px;
+    background: #D5E9FF;
+    bottom: 0;
+    left: 0;
+    padding: 0 16px;
+    font-size: 18px;
+    color: #0D3360;
 
-    .tip {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 4px;
-    }
-    .name {
-      font-size: 16px;
-      font-weight: bold;
-      .tag {
-        font-size: 12px;
-        color: #ff6600;
+    .label {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #406088;
+
+      img {
+        height: 20px;
         margin-left: 4px;
       }
     }
-    .dept {
-      font-size: 13px;
-      color: #555;
-    }
-    .fav {
+
+    .bg {
       position: absolute;
-      right: 10px;
-      top: 10px;
-      border: none;
-      background: none;
-      font-size: 18px;
-      color: #aaa;
+      bottom: 0;
+      left: 0;
     }
   }
+}
 
-  .card {
-    background: #fff;
-    margin: -20px 16px 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    padding: 12px;
+.card {
+  padding: 16px 16px 24px;
 
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      .name {
-        font-weight: bold;
-        .tag {
-          font-size: 12px;
-          color: #ff6600;
-        }
-      }
-      .dept {
-        font-size: 13px;
-        color: #666;
-      }
-      .score {
-        background: #ffeedd;
-        color: #ff6600;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 12px;
-      }
-    }
-
-    .desc {
-      font-size: 13px;
-      color: #666;
-      margin-top: 6px;
-
-      a {
-        color: #1677ff;
-        text-decoration: none;
-      }
-    }
-  }
-
-  .tabs {
+  .name {
     display: flex;
-    border-bottom: 1px solid #eee;
-    margin-top: 16px;
-    background: #fff;
+    align-items: center;
+    font-size: 16px;
+    color: #333333;
+    margin-bottom: 10px;
 
-    .tab {
-      flex: 1;
-      text-align: center;
-      padding: 10px;
-      font-size: 14px;
-      cursor: pointer;
-      &.active {
-        color: #1677ff;
-        border-bottom: 2px solid #1677ff;
-        font-weight: bold;
-      }
+    .label {
+      width: 26px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFEEE0;
+      font-size: 11px;
+      color: #FF8E2E;
+      margin-right: 8px;
+      border-radius: 2px;
     }
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #999999;
+
+    .label {
+      width: 48px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #DEECFF;
+      font-size: 11px;
+      color: #2386FF;
+      margin-right: 8px;
+      border-radius: 2px;
+    }
+  }
+}
+
+.Introduction {
+  margin: 16px;
+  background: url('@/assets/Introduction.png');
+  background-size: 100% 100%;
+  height: 335px;
+  padding: 8px 12px;
+  margin-bottom: 100px;
+
+  .title {
+    padding-left: 20px;
+    font-size: 16px;
+    color: #333333;
   }
 
   .content {
-    padding: 16px;
+    margin-top: 12px;
     background: #fff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #666666;
     font-size: 14px;
-    line-height: 1.6;
-
-    h2 {
-      font-size: 15px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
   }
+}
 
-  .hospital {
-    background: #fff;
-    margin: 10px 0;
-    padding: 16px;
-    font-size: 14px;
+.submit {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  padding: 0 16px 34px;
+  background: #fff;
 
-    h2 {
-      font-size: 15px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    p + p {
-      margin-top: 4px;
-    }
-  }
-
-  .footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+  .btn {
     width: 100%;
-    background: #fff;
-    padding: 12px;
+    display: flex;
+    height: 47px;
+    align-items: center;
+    justify-content: center;
+    background: #2386FF;
+    color: #fff;
+    font-size: 16px;
 
-    .btn {
-      width: 100%;
-      background: #1677ff;
-      color: #fff;
-      border: none;
-      padding: 12px 0;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: bold;
+    &.disabled {
+      background: #EDEFF2;
+      color: #BEC2CC;
     }
   }
 }

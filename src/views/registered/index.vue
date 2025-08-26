@@ -25,8 +25,7 @@ const handleSelect = (val: any) => {
 <template>
   <div class="bg">
     <div class=" headerTab">
-      <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-        @click="goback" />
+      <img alt="返回" src="@/assets/back1.png" @click="goback" />
     </div>
     <div class="container">
       <div class="top">
@@ -130,6 +129,14 @@ const handleSelect = (val: any) => {
   align-items: center;
   z-index: 99;
   padding-bottom: 54px;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
+
 
   div {
     position: absolute;

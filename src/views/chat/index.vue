@@ -1,31 +1,20 @@
 <script lang="ts" setup>
-import MarkdownIt from 'markdown-it'
 import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useWebSocket } from "@/stores/websocket.ts";
 import { useChat } from "@/stores/chatService.ts";
 import { useRoute, useRouter } from 'vue-router';
-import axios from "axios";
 import chat from "@/api/chat.ts";
-import { ElLoading, ElMessage, type UploadUserFile } from 'element-plus'
-import voiceInput from '@/components/VoiceInput.vue'
+import voiceInput from './components/VoiceInput.vue'
+import recordAudio from './components/RecordAudio.vue'
 
 const router = useRouter();
 const route = useRoute();
 const chatStore = useChat();
-const md = new MarkdownIt()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
-const recommendDetail = ref<any>({})
 const isDialog = ref(false)
-const recommendName = ref('')
 const visualizerRef = ref();
 const isVoice = ref(false)
-const fileList = ref<UploadUserFile[]>([])
-const isMedicalHistory = ref(false)
-const past_history = ref('')
-const allergy_history = ref('')
-const family_history = ref('')
-const isSendFlg = ref(false)
 
 
 //  聊天信息置底
@@ -38,11 +27,8 @@ function toScrollBottom() {
   })
 }
 
-function removeSpaceAfterNumber(str: any) {
-  return str.replace(/(\d+)\.\s+/g, '\$1.')
-}
-
 const isCase = ref(false)
+const imgList = ref<any>([])
 onMounted(() => {
 
   chatStore.questions()
@@ -59,7 +45,10 @@ onMounted(() => {
     // 每隔 5 秒检查一次 WebSocket 状态
     if (route.query.chat_id) {
       if (route.query.isCase) {
-        isCase.value = true
+        chat.medical(parseInt(route.query.chat_id as string)).then(res => {
+          imgList.value = res.data
+          isCase.value = true
+        })
       }
       webSocket.chat_id = parseInt(route.query.chat_id as string)
       webSocket.step = 'collect'
@@ -95,103 +84,21 @@ watchEffect(() => {
   }
   // 当有推荐科室时，停止语音输入
   if (webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
-    isMedicalHistory.value = true
     isVoice.value = false;
     visualizerRef.value?.stop();
     toScrollBottom()
   }
 })
 
-function more() {
-  chatStore.questions()
-}
-
 function sendTag(item: any, name: string) {
   webSocket.historyList[webSocket.historyList.length - 1].quick_options = ''
   webSocket.sendMessage(name)
 }
 
-function backPrev(flg: boolean) {
-  if (flg) {
-    let data = JSON.stringify({
-      past_history: past_history.value,
-      allergy_history: allergy_history.value,
-      family_history: family_history.value,
-    })
-    let name = recommendName.value || '无'
-    let id = webSocket.chat_id
-    router.push({
-      name: 'department',
-      query: { id, name, data }
-    })
-  } else {
-    router.push({
-      name: 'department',
-    })
-  }
-
-}
-
-function backNext(id: number, name: string) {
-  recommendName.value = name
-  const loading = ElLoading.service({
-    lock: true,
-    text: '加载中',
-    background: 'rgba(0, 0, 0, 0.7)',
+function backPrev() {
+  router.push({
+    name: 'department',
   })
-  chat.summary(id).then((res) => {
-    isDialog.value = true
-    loading.close()
-    recommendDetail.value = res.data
-  })
-  // router.push({
-  //   name: 'detail',
-  //   params: {id, name}
-  // })
-}
-
-
-async function toDetail() {
-  let data = encodeURIComponent(JSON.stringify({
-    past_history: past_history.value,
-    allergy_history: allergy_history.value,
-    family_history: family_history.value,
-  }))
-  if (fileList.value.length === 0) {
-    let name = recommendName.value || '无'
-    let id = webSocket.chat_id
-    router.push({
-      name: 'detail',
-      params: { id, name, data }
-    })
-    isDialog.value = false
-  } else {
-    const loading = ElLoading.service({
-      lock: true,
-      text: '上传中',
-      background: 'rgba(0, 0, 0, 0.7)',
-    })
-    const formData = new FormData()
-    fileList.value.forEach(file => {
-      formData.append('files', file.raw!) // file.raw 是 UploadRawFile
-    })
-    try {
-      await axios.post(`https://cyh.effyic.com/api/chat/${webSocket.chat_id}/upload`, formData)
-      ElMessage.success('上传成功！')
-      const name = recommendName.value || '无'
-      const id = webSocket.chat_id
-      loading.close()
-      router.push({
-        name: 'detail',
-        params: { id, name, data }
-      })
-      isDialog.value = false
-    } catch (err) {
-      loading.close()
-      ElMessage.error('上传失败，请稍后重试')
-    }
-
-  }
 }
 
 onUnmounted(() => {
@@ -201,13 +108,11 @@ onUnmounted(() => {
 })
 
 const handleStart = () => {
-  // if (isSendFlg.value) return;
   isVoice.value = true
   visualizerRef.value.start();
   visualizerRef.value.setAutoSend(true)
 };
 const onTranscript = (text: string) => {
-  // if (isSendFlg.value) return;
   webSocket.sendMessage(text)
 };
 const handleStop = () => {
@@ -215,65 +120,24 @@ const handleStop = () => {
   isVoice.value = false
 };
 
-
-// 上传前检查文件格式
-const handleChange = (file: any, fileListNow: any) => {
-  const isValidType = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'].includes(file.raw?.type || '')
-  const isValidSize = (file.size || 0) / 1024 / 1024 <= 20
-
-  if (!isValidType) {
-    ElMessage.error('只能上传 PNG、JPG、JPEG、PDF 格式的文件')
-    removeFile(file)
-  }
-
-  if (!isValidSize) {
-    ElMessage.error('文件大小不能超过 20MB')
-    removeFile(file)
-  }
-}
-
-const handleExceed = () => {
-  ElMessage.error('最多只能上传十个文件')
-}
-
-// 自定义上传逻辑
-const httpRequest = async (option: any) => {
-  return
-}
-const isImage = (file: any) => {
-  const type = file.raw?.type || file.type
-  return type?.startsWith('image/')
-}
-// 删除文件
-const removeFile = (index: number) => {
-  fileList.value.splice(index, 1)
-}
-const close = () => {
-  isDialog.value = false
-  if (webSocket.historyList.length > 0 && webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
-    webSocket.historyList[webSocket.historyList.length - 1].recommended_dept = []
-    // isSendFlg.value = true
-  }
-}
 </script>
 
 <template>
+  <!-- <recordAudio @transcript="onTranscript" style="margin-top: 50px;"></recordAudio> -->
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-      @click="backPrev(false)" />
+    <img alt="返回" src="@/assets/back1.png" @click="backPrev" />
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
     <div class="dialogue">
-      <div class="cases" v-if="isCase">
-        <img style="width: 24px;" src="@/assets/cases1.png" alt="">
+      <div class="cases" v-if="isCase" @click="isDialog = true">
+        <img src="@/assets/cases1.png" alt="">
         已传病例
-        <img style="width: 16px;" src="@/assets/cases2.png" alt="">
+        <img class="caseImg" src="@/assets/cases2.png" alt="">
       </div>
       <div ref="messageCont" class="content">
-        <div class="message-wrapper" style="padding-top: 50px;">
-
-          <img style="width: 100%;margin-top: 10px;" src="@/assets/chatTop.png" alt="">
+        <div class="message-wrapper">
+          <img class="chatTop" src="@/assets/chatTop.png" alt="">
           <div class="responseCont" style="margin-top: 20px">
             <div class="chatAnswer">
               <div class="chatTxt" style="max-width: 100%;">
@@ -297,13 +161,17 @@ const close = () => {
               class="chatAnswer">
               <!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
-                <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" />
-                <span
-                  v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
-                  style="color: #2386FF;"
-                  @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
-                  {{ isFirst ? '或上传病例材料' : '选择上传过往的病例材料' }}
-                </span>
+                <!-- <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" /> -->
+                <div>
+                  {{ item.content }}
+                  <span
+                    v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
+                    style="color: #2386FF;"
+                    @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
+                    【上传】
+                  </span>
+                </div>
+
               </div>
             </div>
             <div v-if="item.role !== 'user'">
@@ -328,18 +196,18 @@ const close = () => {
                   <div class="item">
                     <div class="itemTitle">
                       <img src="@/assets/recommendIcon.png">
-                      {{ item.recommended_dept.name }}
+                      {{ item.recommended_dept.name }} {{ item.recommended_doctor }}
                     </div>
                     <div class="itemContent">
                       <div class="info">{{ item.recommended_dept.desc }}</div>
                       <div class="btn"
-                        @click="router.push({ path: '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept.name } })">
+                        @click="router.push({ path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept.name } })">
                         去挂号
                       </div>
                     </div>
                   </div>
                   <div class="msg">
-                    没有符合的科室，选择<span @click="backPrev(true)">其他科室</span>
+                    没有符合的科室，选择<span @click="backPrev">其他科室</span>
                   </div>
                 </div>
               </div>
@@ -350,14 +218,13 @@ const close = () => {
       <div class="Bottombox">
         <div class="defaultInputText">
           <div class="sendbox">
-            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
-              style="width: 24px;margin-right: 8px;cursor: pointer;" @click="handleStart">
+            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png" @click="handleStart">
             <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
               @keydown.enter.stop="onTranscript(webSocket.userContext)">
             <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
             </voiceInput>
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
-              <img alt="" src="@/assets/voiceStop.png" style="width: 24px;margin-right: 8px;cursor: pointer;">
+              <img alt="" src="@/assets/voiceStop.png">
             </div>
             <div v-if="!isVoice" style="display: flex;align-items: center;">
               <div class="sendBtn" @click="onTranscript(webSocket.userContext)">
@@ -369,39 +236,8 @@ const close = () => {
       </div>
     </div>
     <el-dialog v-model="isDialog">
-      <div class="dialogBox">
-        <img src="@/assets/success.png" style="width: 64px; height: 64px;">
-        <span>预约成功</span>
-        <div class="detailBox">
-          <img src="@/assets/detailHeaderIcon.png" style="width:50px; height:50px;">
-          <div class="detailCont">
-            <div class="name">{{ recommendName || '内心科' }}</div>
-            <p>知名专家 辛弃疾</p>
-          </div>
-        </div>
-        <div class="time" style="margin-top: 16px;">就诊时间：</div>
-        <div class="time">{{ recommendDetail?.appointment_time }}</div>
-        <el-upload v-if="fileList.length < 10" v-model:file-list="fileList" :auto-upload="false"
-          :http-request="httpRequest" :limit="10" :on-change="handleChange" :on-exceed="handleExceed"
-          :show-file-list="false" accept=".png,.jpg,.jpeg,.pdf" class="upload-demo" multiple style="width: 100%">
-          <div class="upLoad">点击上传过往病例或检查文档</div>
-        </el-upload>
-        <div class="imgBox">
-          <div v-for="(item, index) in fileList" class="imgList">
-            <div class="imgDetail">
-              <img v-if="isImage(item?.raw)" src="@/assets/fileIcon.png" style="width:40px; height:40px;">
-              <img v-else src="@/assets/pdf.png" style="width:40px; height:40px;">
-              <div class="name">{{ item.name }}</div>
-              <div class="del">
-                <img src="@/assets/del.png" style="width:32px; height:32px;" @click="removeFile(index)">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="display: flex;">
-          <div class="bacChat" @click="close">返回</div>
-          <div class="btn" @click="toDetail">病历文档临时查看</div>
-        </div>
+      <div class="imgList">
+        <img v-for="(item, index) in imgList" :key="index" :src="item.file_url" alt="">
       </div>
     </el-dialog>
   </div>
@@ -425,6 +261,11 @@ const close = () => {
 
   img {
     margin: 0 8px;
+    width: 24px;
+  }
+
+  .caseImg {
+    width: 16px;
   }
 }
 
@@ -438,6 +279,13 @@ const close = () => {
   display: flex;
   align-items: center;
   z-index: 99;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
 
   div {
     position: absolute;
@@ -553,46 +401,13 @@ const close = () => {
   }
 }
 
-.imgBox {
-  display: flex;
-  flex-wrap: wrap;
-  white-space: nowrap;
-  width: 100%;
+.imgList {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 
-  .imgList {
-    display: flex;
-
-    .imgDetail {
-      display: flex;
-      flex-direction: column;
-      width: 40px;
-      flex-wrap: wrap;
-      position: relative;
-      justify-content: center;
-      align-items: center;
-      margin-right: 4px;
-      margin-bottom: 4px;
-
-      .name {
-        width: 100%;
-        font-size: 12px;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-
-      .del {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        background: rgba(0, 0, 0, 0.3);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-    }
+  img {
+    width: 100%;
   }
 }
 
@@ -874,7 +689,7 @@ const close = () => {
 
   .dialogue {
     // height: calc(100vh - 90px); /* 回退方案 */
-    height: calc(100vh - 44px);
+    height: 100%;
     //background:#F8F8FA;
     background-image: linear-gradient(180deg, rgba(249, 250, 251, 0.9), rgba(242, 244, 247, 0.9) 90.48%);
     //border-top-left-radius: 20px;
@@ -918,7 +733,7 @@ const close = () => {
 
       .message-wrapper {
         min-height: 100%;
-        //padding-top: 10px;
+        padding-top: 50px;
       }
 
       .promptBox {
@@ -1004,6 +819,11 @@ const close = () => {
           }
 
         }
+      }
+
+      .chatTop {
+        margin-top: 10;
+        width: 100%;
       }
 
       .responseCont {
@@ -1586,6 +1406,11 @@ const close = () => {
         // padding-bottom: 9px;
         background: url("@/assets/sendBg.png") no-repeat;
         background-size: 100% 100%;
+
+        img {
+          width: 24px;
+          margin-right: 8px;
+        }
 
         .sendInput {
           font-size: 15px;

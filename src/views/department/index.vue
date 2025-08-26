@@ -4,7 +4,7 @@
     <div class="search-header">
       <div class="search-header-content">
         <div class="back-button" @click="router.push('/index')">
-          <img alt="返回" src="@/assets/back.png" style="width: 24px; height: 24px;display: block" />
+          <img alt="返回" src="@/assets/back.png" />
         </div>
         <div class="search-bar">
           <input v-model="search" placeholder="搜索科室" type="text" @keyup.enter="handleSearch" />
@@ -14,13 +14,13 @@
       <div class="ai-card">
         <div class="hospital-info">
           <img alt="朝阳医院智能分诊" class="hospital-logo" src="@/assets/hospital-logo.png" />
-          <span class="hospital-name" style="font-size: 14px;font-weight: 600;color: #5E6C83;">朝阳医院智能分诊</span>
+          <span class="hospital-name">朝阳医院智能分诊</span>
         </div>
         <div class="ai-content">
           <div class="ai-left">
             <img alt="AI机器人" class="robot-icon" src="@/assets/robot-icon.png" />
             <div class="ai-text">
-              <div style="font-size: 14px;color: #5E6C83;">科学研判、快速分诊</div>
+              <div class="label">科学研判、快速分诊</div>
               <div class="blue-text">针对病症提供建议</div>
             </div>
           </div>
@@ -53,46 +53,17 @@
         </div>
       </div>
     </div>
-    <el-dialog v-model="isDialog">
-      <div class="recommendBox">
-        <div class="titleName">推荐挂号科室</div>
-        <div class="detail">
-          <div class="top">
-            <img src="@/assets/recommendIcon.png" style="width: 24px; height: 24px;">
-            {{ departmentName }}
-          </div>
-          <div class="btnBox">
-            <div class="leftBtn" @click="isSuccess = true">确认挂号</div>
-            <div class="rightBtn" @click="isDialog = false">取消挂号</div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-    <el-dialog v-model="isSuccess">
-      <div class="dialogBox">
-        <img src="@/assets/success.png" style="width: 64px; height: 64px;">
-        <span>预约成功</span>
-        <div class="time" style="margin-top: 16px;">就诊时间：</div>
-        <div class="time">{{ appointmentTime }}</div>
-        <div class="btn" @click="toDetail">{{ chat_id == 0 ? '确认' : '查看病情文档' }}</div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import type { SubDepartment } from '../types/department';
+import type { SubDepartment } from '../../types/department';
 import DepartmentService from '@/api/department';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useWebSocket } from "@/stores/websocket.ts";
 const websocket = useWebSocket();
 const router = useRouter();
-const route = useRoute();
-const isDialog = ref(false);
-const departmentName = ref('')
-const isSuccess = ref(false);
-const appointmentTime = ref('')
 
 interface Department {
   id: number;
@@ -103,9 +74,6 @@ interface Department {
 const selectedIndex = ref(0);
 const departmentList = ref<Department[]>([]);
 const search = ref('');
-const caseDetail = ref<any>({})
-const chat_id = ref<any>(0)
-const recommendName = ref<any>('')
 
 const currentDepartment = computed(() =>
   departmentList.value[selectedIndex.value] || null
@@ -150,72 +118,14 @@ function toChat() {
   router.push('/chat')
 }
 
-function toDetail() {
-  let id = chat_id.value
-  let name = recommendName.value || '无'
-  let data = JSON.stringify(caseDetail.value)
-  if (id !== 0) {
-    router.push({
-      name: 'detail',
-      params: { id, name, data }
-    })
-  }
-  isDialog.value = false
-  isSuccess.value = false
-}
 
 onMounted(() => {
-  if (route.query?.data) {
-    let data: any = route.query.data
-    caseDetail.value = JSON.parse(data)
-    chat_id.value = route.query.id
-    recommendName.value = route.query.name
-  }
   fetchDepartments();
 });
 
-function generateRandomAppointmentTime() {
-  // 获取当前时间
-  const now = new Date();
-
-  // 生成1-7天后的随机日期
-  const daysToAdd = Math.floor(Math.random() * 7) + 1;
-  const appointmentDate = new Date(now);
-  appointmentDate.setDate(now.getDate() + daysToAdd);
-
-  // 生成9:00-18:00之间的随机时间
-  const minMinutes = 9 * 60;  // 9:00
-  const maxMinutes = 18 * 60; // 18:00
-  const randomMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes)) + minMinutes;
-
-  const hour = Math.floor(randomMinutes / 60);
-  const minute = randomMinutes % 60;
-
-  // 设置具体时间
-  const time = new Date(appointmentDate);
-  time.setHours(hour, minute, 0, 0);
-
-  // 格式化为中文格式
-  const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
-  const weekday = weekdays[time.getDay()];
-
-  // 判断上午还是下午
-  let period = '上午';
-  let displayHour = hour;
-
-  if (hour >= 12) {
-    period = '下午';
-    if (hour > 12) {
-      displayHour = hour - 12;
-    }
-  }
-  appointmentTime.value = `${time.getFullYear()}年${time.getMonth() + 1}月${time.getDate()}日 ${weekday} ${period}${displayHour}:${String(minute).padStart(2, '0')}分`;
-}
-
-
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .department-page {
   height: 100vh;
   background-color: #f5f7fa;
@@ -239,6 +149,12 @@ function generateRandomAppointmentTime() {
 .back-button {
   font-size: 20px;
   margin-top: 10px;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+  }
 }
 
 .search-bar {
@@ -283,6 +199,12 @@ function generateRandomAppointmentTime() {
   display: flex;
   align-items: center;
   margin-bottom: 6px;
+
+  .hospital-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #5E6C83;
+  }
 }
 
 .hospital-logo {
@@ -306,6 +228,11 @@ function generateRandomAppointmentTime() {
   display: flex;
   align-items: center;
   gap: 12px;
+
+  .label {
+    font-size: 14px;
+    color: #5E6C83;
+  }
 }
 
 .robot-icon {

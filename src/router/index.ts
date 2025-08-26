@@ -17,7 +17,7 @@ const router = createRouter({
       path: '/chat',
       name: 'chat',
       props: true,
-      component: () => import('@/views/ChatView.vue'),
+      component: () => import('@/views/chat/index.vue'),
       meta: {
         title: '智能分诊'
       }
@@ -25,22 +25,12 @@ const router = createRouter({
     {
       path: '/department',
       name: 'department',
-      component: () => import('@/views/DepartmentView.vue'),
+      component: () => import('@/views/department/index.vue'),
     },
     {
       path: '/hospital',
       name: 'hospital',
-      component: () => import('@/views/HospitalView.vue'),
-    },
-    {
-      path: '/detail/:id/:name/:data',
-      name: 'detail',
-      component: () => import('@/views/DetailView.vue'),
-    },
-    {
-      path: '/voiceAssistant',
-      name: 'voiceAssistant',
-      component: () => import('@/views/VoiceAssistantView.vue'),
+      component: () => import('@/views/hospital/index.vue'),
     },
     {
       path: '/reserve',

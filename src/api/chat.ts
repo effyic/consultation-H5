@@ -25,6 +25,16 @@ class ChatApi {
     return apiClient.postForm(`chat/${id}/upload`, data)
   }
 
+  //获取上传病例资料
+  medical(id: number) {
+    return apiClient.get(`chat/${id}/medical`)
+  }
+
+  //创建患者信息
+  patients(data: any) {
+    return apiClient.post(`patients/create`, data)
+  }
+
 
   //语音转文字 AsrText
   transcriptions(data: any) {

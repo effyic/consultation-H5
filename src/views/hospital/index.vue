@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {useRouter} from 'vue-router';
+import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
@@ -15,14 +15,13 @@ function backPrev() {
 
 <template>
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-         @click="backPrev"/>
+    <img alt="返回" src="@/assets/back1.png" @click="backPrev" />
     <div>选择院区</div>
   </div>
-  <div  class="main">
-    <img class="img" src="@/assets/1.png"  @click="toRegister">
-    <img class="img" src="@/assets/2.png"  @click="toRegister">
-    <img class="img" src="@/assets/3.png"  @click="toRegister">
+  <div class="main">
+    <img class="img" src="@/assets/1.png" @click="toRegister">
+    <img class="img" src="@/assets/2.png" @click="toRegister">
+    <img class="img" src="@/assets/3.png" @click="toRegister">
   </div>
 </template>
 
@@ -37,6 +36,13 @@ function backPrev() {
   display: flex;
   align-items: center;
   z-index: 99;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
 
   div {
     position: absolute;
@@ -56,7 +62,8 @@ function backPrev() {
   color: #000;
   display: flex;
   flex-direction: column;
-  .img{
+
+  .img {
     margin: 12px 0;
     width: 100%;
     height: 210px;

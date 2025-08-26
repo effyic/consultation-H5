@@ -13,6 +13,7 @@ export const useWebSocket = defineStore('webSocket', () => {
   const step = ref('recommend')
 
   const connectWebSocket = () => {
+    // ws.value = new WebSocket('ws://192.168.0.43:8080/api/chat/ws')
     ws.value = new WebSocket('wss://cyh.effyic.com/api/chat/ws')
     ws.value.onopen = () => {
       console.log('连接建立')
@@ -33,6 +34,7 @@ export const useWebSocket = defineStore('webSocket', () => {
         }
         if (data.recommended_dept) {
           historyList.value[historyList.value.length - 1].recommended_dept = data.recommended_dept
+          historyList.value[historyList.value.length - 1].recommended_doctor = data.recommended_doctor || ''
         }
         isReplying.value = false;
       }

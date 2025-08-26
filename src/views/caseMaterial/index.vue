@@ -70,8 +70,7 @@ const submit = async () => {
 
 <template>
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-      @click="goback" />
+    <img alt="返回" src="@/assets/back1.png" @click="goback" />
     <div>病例材料</div>
   </div>
   <div class="container" v-if="!isSuccess">
@@ -118,6 +117,13 @@ const submit = async () => {
   display: flex;
   align-items: center;
   z-index: 99;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
 
   div {
     position: absolute;

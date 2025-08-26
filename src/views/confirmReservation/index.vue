@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import chat from '@/api/chat'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,12 +11,17 @@ const goback = () => {
 }
 
 const isSuccess = ref(false)
+const confirm = () => {
+  if (route.query.chat_id) {
+    Promise.all([chat.summary(parseInt(route.query.chat_id as string)), chat.patients({ chat_id: parseInt(route.query.chat_id as string) })])
+  }
+  isSuccess.value = true
+}
 </script>
 
 <template>
   <div class=" headerTab">
-    <img alt="返回" src="@/assets/back1.png" style="width: 24px; height: 24px;display: block;margin-left: 12px;"
-      @click="goback" />
+    <img alt="返回" src="@/assets/back1.png" @click="goback" />
     <div>确认预约</div>
   </div>
   <div class="container" v-if="!isSuccess">
@@ -51,7 +57,7 @@ const isSuccess = ref(false)
         <div class="value">13800138000</div>
       </div>
     </div>
-    <div class="btn" @click="isSuccess = true">确认预约</div>
+    <div class="btn" @click="confirm">确认预约</div>
     <div class="prompt">
       <div class="title">温馨提示</div>
       <div>1.为防止号源被随意占用浪费，请核对预约信息。</div>
@@ -95,6 +101,14 @@ const isSuccess = ref(false)
   display: flex;
   align-items: center;
   z-index: 99;
+
+  img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    margin-left: 12px;
+  }
+
 
   div {
     position: absolute;
