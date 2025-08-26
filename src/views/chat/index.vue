@@ -159,7 +159,6 @@ const handleStop = () => {
             <!-- AI助手消息 -->
             <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
               class="chatAnswer">
-              <!--              <div :style="{ backgroundImage: `url(${chatIcon})` }" class="avatar"/>-->
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
                 <!-- <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" /> -->
                 <div>

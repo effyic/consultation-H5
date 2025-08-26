@@ -5,15 +5,9 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/index',
+      redirect: '/chat',
     },
     {
-      path: '/index',
-      name: 'index',
-      component: () => import('@/views/index.vue'),
-    },
-    {
-      // /:consultationId/:date
       path: '/chat',
       name: 'chat',
       props: true,
@@ -23,39 +17,9 @@ const router = createRouter({
       }
     },
     {
-      path: '/department',
-      name: 'department',
-      component: () => import('@/views/department/index.vue'),
-    },
-    {
-      path: '/hospital',
-      name: 'hospital',
-      component: () => import('@/views/hospital/index.vue'),
-    },
-    {
-      path: '/reserve',
-      name: 'reserve',
-      component: () => import('@/views/reserve/index.vue'),
-    },
-    {
-      path: '/registered',
-      name: 'registered',
-      component: () => import('@/views/registered/index.vue'),
-    },
-    {
-      path: '/confirmReservation',
-      name: 'confirmReservation',
-      component: () => import('@/views/confirmReservation/index.vue'),
-    },
-    {
       path: '/caseMaterial',
       name: 'caseMaterial',
       component: () => import('@/views/caseMaterial/index.vue'),
-    },
-    {
-      path: '/doctorDetail',
-      name: 'doctorDetail',
-      component: () => import('@/views/doctorDetail/index.vue'),
     },
   ],
 })
