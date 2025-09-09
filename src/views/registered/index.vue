@@ -84,8 +84,16 @@ const handleSelect = (val: any) => {
           <div class="time">{{ date }} {{ time }}</div>
           <div class="week">星期{{ weekday }}（下午）</div>
         </div>
-        <div class="btn"
-          @click="router.push({ path: '/confirmReservation', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName, time: time, weekday: weekday, date: date } })">
+        <div class="btn" @click="router.push({
+          path: '/confirmReservation', query: {
+            chat_id: route.query.chat_id,
+            departmentName: route.query.departmentName,
+            doctorName: route.query.doctorName,
+            time: time,
+            weekday: weekday,
+            date: date
+          }
+        })">
           确认预约</div>
       </div>
       <div class=" bottom" v-if="active == 1">

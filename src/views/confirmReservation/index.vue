@@ -11,11 +11,15 @@ const goback = () => {
 }
 
 const isSuccess = ref(false)
+const patient_name = ref('张丽')
 const confirm = () => {
   if (route.query.chat_id) {
-    Promise.all([chat.summary(parseInt(route.query.chat_id as string)), chat.patients({ chat_id: parseInt(route.query.chat_id as string) })])
+    chat.patients({ chat_id: parseInt(route.query.chat_id as string) }).then(res => {
+      patient_name.value = res.data.patient_name
+      isSuccess.value = true
+    })
+    chat.summary(parseInt(route.query.chat_id as string))
   }
-  isSuccess.value = true
 }
 </script>
 
@@ -28,16 +32,13 @@ const confirm = () => {
     <div class="doctor">
       <div class="avatar"></div>
       <div class="info">
-        <div class="name">徐立</div>
+        <div class="name">{{ route.query.doctorName }}</div>
         <div class="title">副主任医师 {{ route.query.departmentName }}专病</div>
         <div class="address">
           <div class="label">三甲</div>
           首都医科大学附属北京朝阳医院石景山院区
         </div>
       </div>
-    </div>
-    <div class="patient">
-      张丽
     </div>
     <div class="reserveInfo">
       <div class="item">
@@ -71,15 +72,15 @@ const confirm = () => {
     </div>
     <div class="bg"></div>
     <div class="content">
-      <div class="item">徐立</div>
+      <div class="item">{{ route.query.doctorName }}</div>
       <div class="item">北京朝阳医院石景山院区</div>
-      <div style="color: #666666;">呼吸科</div>
+      <div style="color: #666666;">{{ route.query.departmentName }}</div>
       <div class="info">
         <div>
           {{ route.query.date }} 星期{{ route.query.weekday }}（下午）{{ route.query.time }}
         </div>
         <div>
-          就诊人：张丽【7211262858】
+          就诊人： {{ patient_name }}【7211262858】
         </div>
       </div>
     </div>

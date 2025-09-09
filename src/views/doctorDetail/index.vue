@@ -7,14 +7,14 @@
     <div class="tip">线上看诊，为健康省点时间</div>
     <div class="info">
       <p class="name">
-        <span>徐立</span>知名专家
+        <span>{{ route.query.doctorName }}</span>知名专家
       </p>
-      <p>北京朝阳医院常营院区 · 心内科</p>
+      <p>北京朝阳医院石景山院区 · {{ route.query.departmentName }}</p>
     </div>
     <div class="bottom">
       <img class="bg" src="@/assets/doctorBottom.png" alt="">
-      <div style="position: relative;z-index: 2;top: -9px;">
-        徐立
+      <div class="doctor">
+        {{ route.query.doctorName }}
         <div class="label">
           知名专家
           <img src="@/assets/evaluate.png" alt="">
@@ -25,7 +25,7 @@
   <div class="card">
     <div class="name">
       <div class="label">三甲</div>
-      北京朝阳医院常营院区·心内科
+      北京朝阳医院石景山院区·{{ route.query.departmentName }}
     </div>
     <div class="title">
       <div class="label">医师简介</div>
@@ -58,7 +58,7 @@
   </van-tabs>
   <div class="submit">
     <div class="btn"
-      @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName } })">
+      @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName, doctorName: route.query.doctorName } })">
       预约服务</div>
   </div>
 
@@ -183,9 +183,16 @@ const goback = () => {
     }
 
     .bg {
+      width: 165px;
       position: absolute;
       bottom: 0;
       left: 0;
+    }
+
+    .doctor {
+      position: relative;
+      z-index: 2;
+      top: -9px;
     }
   }
 }

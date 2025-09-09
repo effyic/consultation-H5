@@ -186,7 +186,7 @@ const handleStop = () => {
               <div v-if="item.recommended_dept" class="recommendBox">
                 <div style="font-size: 14px;color: #333333;">
                   <span style="color: #666666;margin-right: 4px;">推荐至</span>
-                  {{ item.recommended_dept.parent.name }} {{ item.recommended_dept.name }}
+                  {{ item.recommended_dept?.parent.name || '' }} {{ item.recommended_dept?.name || '' }}
                 </div>
                 <div class="recommendContainer">
                   <div class="department">
@@ -196,12 +196,17 @@ const handleStop = () => {
                   <div class="item">
                     <div class="itemTitle">
                       <img src="@/assets/recommendIcon.png">
-                      {{ item.recommended_dept.name }} {{ item.recommended_doctor }}
+                      {{ item.recommended_dept?.name || '' }} {{ item.recommended_doctor || '' }}
                     </div>
                     <div class="itemContent">
-                      <div class="info">{{ item.recommended_dept.desc }}</div>
-                      <div class="btn"
-                        @click="router.push({ path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept.name } })">
+                      <div class="info">{{ item.recommended_dept?.desc || '' }}</div>
+                      <div class="btn" @click="router.push({
+                        path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: {
+                          chat_id: webSocket.chat_id,
+                          departmentName: item.recommended_dept?.name || '',
+                          doctorName: item.recommended_doctor ? item.recommended_doctor : ''
+                        }
+                      })">
                         去挂号
                       </div>
                     </div>

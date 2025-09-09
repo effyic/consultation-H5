@@ -10,12 +10,14 @@ const active = ref(0);
 const goback = () => {
   router.go(-1)
 }
+
+const arr = ['徐立', '童朝晖', '李春盛'];
+const doctorName = arr[Math.floor(Math.random() * arr.length)];
 </script>
 
 <template>
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png"
-      @click="goback" />
+    <img alt="返回" src="@/assets/back1.png" @click="goback" />
     <div>{{ route.query.departmentName || '' }}</div>
   </div>
   <van-tabs v-model:active="active" style="margin-top: 60px;">
@@ -31,9 +33,9 @@ const goback = () => {
             <div class="avatar"></div>
             <div class="itemContent">
               <div class="name">
-                徐立
+                {{ doctorName }}
                 <div class="btn"
-                  @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName } })">
+                  @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName, doctorName: doctorName } })">
                   立即挂号
                 </div>
               </div>
@@ -67,9 +69,9 @@ const goback = () => {
             <div class="avatar"></div>
             <div class="itemContent">
               <div class="name">
-                徐立
+                {{ doctorName }}
                 <div class="btn"
-                  @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName } })">
+                  @click="router.push({ path: '/registered', query: { chat_id: route.query.chat_id, departmentName: route.query.departmentName, doctorName: doctorName } })">
                   立即挂号
                 </div>
               </div>

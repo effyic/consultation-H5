@@ -13,7 +13,7 @@ export const useWebSocket = defineStore('webSocket', () => {
   const step = ref('recommend')
 
   const connectWebSocket = () => {
-    // ws.value = new WebSocket('ws://192.168.0.43:8080/api/chat/ws')
+    // ws.value = new WebSocket('ws://192.168.0.16:8080/api/chat/ws')
     ws.value = new WebSocket('wss://cyh.effyic.com/api/chat/ws')
     ws.value.onopen = () => {
       console.log('连接建立')
