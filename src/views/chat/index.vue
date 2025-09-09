@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router';
 import chat from "@/api/chat.ts";
 import voiceInput from './components/VoiceInput.vue'
 import recordAudio from './components/RecordAudio.vue'
+import holdSpeak from './components/holdSpeak.vue'
+
 
 const router = useRouter();
 const route = useRoute();
@@ -30,7 +32,7 @@ function toScrollBottom() {
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
-
+  holdSpeakRef.value?.start()
   chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
@@ -119,11 +121,27 @@ const handleStop = () => {
   visualizerRef.value.stop();
   isVoice.value = false
 };
+const isRecording = ref(false)
+
+const holdSpeakRef = ref()
+const startRecord = async () => {
+  navigator.vibrate?.(200)
+  isRecording.value = true
+  holdSpeakRef.value?.startRecording()
+}
+
+const stopRecord = () => {
+  isRecording.value = false
+  holdSpeakRef.value?.stopRecordingAndUpload()
+}
 
 </script>
 
 <template>
   <!-- <recordAudio @transcript="onTranscript" style="margin-top: 50px;"></recordAudio> -->
+  <div class="holdSpeak" :style="`z-index:${isRecording ? 999 : -1}`">
+    <holdSpeak ref="holdSpeakRef" @transcript="onTranscript"></holdSpeak>
+  </div>
   <div class="headerTab">
     <img alt="返回" src="@/assets/back1.png" @click="backPrev" />
     <div>智能分诊</div>
@@ -222,7 +240,7 @@ const handleStop = () => {
       </div>
       <div class="Bottombox">
         <div class="defaultInputText">
-          <div class="sendbox">
+          <!-- <div class="sendbox">
             <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png" @click="handleStart">
             <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
               @keydown.enter.stop="onTranscript(webSocket.userContext)">
@@ -236,6 +254,21 @@ const handleStop = () => {
                 发送
               </div>
             </div>
+          </div> -->
+          <div class="sendbox">
+            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png" @click="isVoice = true">
+            <div v-if="isVoice" style="display: flex;align-items: center;" @click="isVoice = false">
+              <img alt="" src="@/assets/keyboard.png">
+            </div>
+            <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
+              @keydown.enter.stop="onTranscript(webSocket.userContext)">
+
+            <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
+              发送
+            </div>
+            <button class="record" :class="{ active: isRecording }" @touchstart.prevent="startRecord"
+              @touchend.prevent="stopRecord" v-show="isVoice">按住说话
+            </button>
           </div>
         </div>
       </div>
@@ -250,6 +283,14 @@ const handleStop = () => {
 </template>
 
 <style lang="scss" scoped>
+.holdSpeak {
+  position: fixed;
+  width: 100%;
+  top: 50%;
+  padding: 0 50px;
+  z-index: 999;
+}
+
 .cases {
   position: fixed;
   z-index: 9;
@@ -704,7 +745,7 @@ const handleStop = () => {
     box-sizing: border-box;
 
     .content {
-      height: calc(var(--vh) * 100 - 90px - 44px);
+      height: calc(var(--vh) * 100 - 90px);
       overflow-y: auto;
       background-size: cover;
       padding-bottom: 20px;
@@ -1390,6 +1431,25 @@ const handleStop = () => {
           filter: brightness(0) invert(1);
           /* 使图标变为白色 */
           margin-left: 4px;
+        }
+      }
+
+      .record {
+        width: 100%;
+        height: 32px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 13px;
+        color: #fff;
+        background: #2B7DFF;
+        font-weight: 500;
+        border: none;
+
+        &.active {
+          background: #1c64f2;
         }
       }
 
