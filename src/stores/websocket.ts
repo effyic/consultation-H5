@@ -8,7 +8,9 @@ export const useWebSocket = defineStore('webSocket', () => {
   let reconnectTimeout: any = null // 重连超时控制
   const chat_id = ref(0)
   const historyList = ref<any[]>([]) // 问答数组
-  const hos_code = ref<any>('1')
+  const hos_code = ref<any>('1') //小程序给的院区id
+  const medical_record_no = ref<any>('') //小程序的就诊人id
+  const chat_code = ref<any>('') //会话id
   const isReplying = ref(false)
   const step = ref('recommend')
 
@@ -21,7 +23,8 @@ export const useWebSocket = defineStore('webSocket', () => {
     ws.value.onmessage = (e: any) => {
       const data = JSON.parse(e.data); // 转换为对象
       chat_id.value = data.chat_id
-      const last = historyList.value[historyList.value.length - 1];
+      chat_code.value = data.chat_code || ''
+      const last = historyList.value[historyList.value.length - 1]; 
       if (last.role === 'assistant') {
         historyList.value[historyList.value.length - 1] = data
       } else {
@@ -92,6 +95,8 @@ export const useWebSocket = defineStore('webSocket', () => {
         hos_code: hos_code.value,
         chat_id: chat_id.value,
         step: step.value,
+        chat_code: chat_code.value,
+        medical_record_no:medical_record_no.value,
       }
       historyList.value.push(user)
       let assistantData = {
@@ -114,6 +119,8 @@ export const useWebSocket = defineStore('webSocket', () => {
       hos_code: hos_code.value,
       chat_id: chat_id.value,
       step: step.value,
+      chat_code:chat_code.value,
+      medical_record_no:medical_record_no.value,
     }
     let assistantData = {
       role: 'assistant',
