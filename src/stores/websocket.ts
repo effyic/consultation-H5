@@ -24,7 +24,7 @@ export const useWebSocket = defineStore('webSocket', () => {
       const data = JSON.parse(e.data); // 转换为对象
       chat_id.value = data.chat_id
       chat_code.value = data.chat_code || ''
-      const last = historyList.value[historyList.value.length - 1]; 
+      const last = historyList.value[historyList.value.length - 1];
       if (last.role === 'assistant') {
         historyList.value[historyList.value.length - 1] = data
       } else {
@@ -32,6 +32,9 @@ export const useWebSocket = defineStore('webSocket', () => {
       }
       // 判断是否结束
       if (data.done) {
+        historyList.value[historyList.value.length - 1].id = data.id
+        historyList.value[historyList.value.length - 2].id = data.user_message_id
+      } else {
         if (data.quick_options) {
           historyList.value[historyList.value.length - 1].quick_options = data.quick_options
         }
@@ -96,7 +99,8 @@ export const useWebSocket = defineStore('webSocket', () => {
         chat_id: chat_id.value,
         step: step.value,
         chat_code: chat_code.value,
-        medical_record_no:medical_record_no.value,
+        medical_record_no: medical_record_no.value,
+        id: 0
       }
       historyList.value.push(user)
       let assistantData = {
@@ -119,8 +123,8 @@ export const useWebSocket = defineStore('webSocket', () => {
       hos_code: hos_code.value,
       chat_id: chat_id.value,
       step: step.value,
-      chat_code:chat_code.value,
-      medical_record_no:medical_record_no.value,
+      chat_code: chat_code.value,
+      medical_record_no: medical_record_no.value,
     }
     let assistantData = {
       role: 'assistant',

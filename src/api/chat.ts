@@ -35,6 +35,11 @@ class ChatApi {
     return apiClient.post(`patients/create`, data)
   }
 
+  //删除回话记录
+  deleteMessages(data: any) {
+    return apiClient.delete(`chat/messages`, { data: data })
+  }
+
 
   //语音转文字 AsrText
   transcriptions(data: any) {
