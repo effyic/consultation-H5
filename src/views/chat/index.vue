@@ -7,6 +7,7 @@ import chat from "@/api/chat.ts";
 import voiceInput from './components/VoiceInput.vue'
 import recordAudio from './components/RecordAudio.vue'
 import holdSpeak from './components/holdSpeak.vue'
+import { log } from 'console';
 
 
 const router = useRouter();
@@ -135,6 +136,36 @@ const stopRecord = () => {
   holdSpeakRef.value?.stopRecordingAndUpload()
 }
 
+const LONGPRESS_MS = 600
+let timer: any = null
+const activeId = ref(0)
+
+function onTouchStart(msg: any) {
+
+  timer = setTimeout(() => {
+    msg.isPopover = true
+    activeId.value = msg.id
+  }, LONGPRESS_MS)
+}
+function onTouchEnd() {
+  clearTimeout(timer)
+}
+function onTouchMove() {
+  clearTimeout(timer)
+}
+
+function onSelect(action: any) {
+
+  if (action.text === '撤回' && activeId.value) {
+    chat.deleteMessages({ message_ids: [activeId.value, activeId.value + 1] }).then(res => {
+      webSocket.historyList = webSocket.historyList.filter(item => item.id !== activeId.value && item.id !== activeId.value + 1)
+      console.log(webSocket.historyList.filter(item => item.id !== activeId.value && item.id !== activeId.value + 1));
+      console.log(activeId.value);
+
+    })
+  }
+}
+
 </script>
 
 <template>
@@ -169,10 +200,16 @@ const stopRecord = () => {
 
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
-            <div v-if="item.role == 'user'" class="infoCont">
-              <div class="textCont">
-                <p>{{ item.content }}</p>
-              </div>
+            <div v-if="item.role == 'user'" class="infoCont" ref="msgRefs" @touchstart="onTouchStart(item)"
+              @touchend="onTouchEnd" @touchmove="onTouchMove">
+              <van-popover v-model:show="item.isPopover" theme="dark" trigger="manual" :actions="[{ text: '撤回' }]"
+                placement="bottom-end" @select="onSelect">
+                <template #reference>
+                  <div class="textCont">
+                    <p>{{ item.content }}</p>
+                  </div>
+                </template>
+              </van-popover>
             </div>
             <!-- AI助手消息 -->
             <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
@@ -196,7 +233,7 @@ const stopRecord = () => {
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
                 style="color:#000">
                 <div class="tagList">
-                  <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item, name)">
+                  <div v-for="name in item.quick_options" :key="name" class="tagName" @click="sendTag(item, name)">
                     {{ name }}
                   </div>
                 </div>

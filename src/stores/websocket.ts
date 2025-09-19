@@ -29,6 +29,9 @@ export const useWebSocket = defineStore('webSocket', () => {
       }
       // 判断是否结束
       if (data.done) {
+        historyList.value[historyList.value.length - 1].id = data.id
+        historyList.value[historyList.value.length - 2].id = data.user_message_id
+      } else {
         if (data.quick_options) {
           historyList.value[historyList.value.length - 1].quick_options = data.quick_options
         }
@@ -92,6 +95,7 @@ export const useWebSocket = defineStore('webSocket', () => {
         hos_code: hos_code.value,
         chat_id: chat_id.value,
         step: step.value,
+        id: 1
       }
       historyList.value.push(user)
       let assistantData = {
