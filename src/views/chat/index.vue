@@ -7,7 +7,6 @@ import chat from "@/api/chat.ts";
 import voiceInput from './components/VoiceInput.vue'
 import recordAudio from './components/RecordAudio.vue'
 import holdSpeak from './components/holdSpeak.vue'
-import { log } from 'console';
 
 
 const router = useRouter();
