@@ -44,11 +44,14 @@ function mondayFirstOffset(date: Date) {
 const offsetMonthStart = mondayFirstOffset(new Date(year, month, 1));
 const padBeforeToday = offsetMonthStart + (todayDate - 1);
 
-// 生成日格数组
 const rawDays = computed<Cell[]>(() => {
   const arr: Cell[] = [];
-  for (let i = 0; i < padBeforeToday; i++) arr.push({ day: null, hidden: true });
-  for (let d = todayDate; d <= daysInMonth; d++) arr.push({ day: d, hidden: false });
+  for (let i = 0; i < padBeforeToday + 1; i++) { // +1 跳过今天
+    arr.push({ day: null, hidden: true });
+  }
+  for (let d = todayDate + 1; d <= daysInMonth; d++) { // 从明天开始
+    arr.push({ day: d, hidden: false });
+  }
   return arr;
 });
 
@@ -64,7 +67,7 @@ const weeks = computed<Cell[][]>(() => {
   return res;
 });
 
-const selectedDay = ref<number | null>(todayDate);
+const selectedDay = ref<number | null>(todayDate + 1);
 
 function isToday(day: number | null) {
   return day === todayDate;
@@ -87,7 +90,7 @@ function selectDay(cell: Cell) {
 }
 
 onMounted(() => {
-  emitSelected(todayDate); // 默认返回今天
+  emitSelected(todayDate + 1); // 默认返回今天
 });
 </script>
 

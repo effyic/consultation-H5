@@ -7,6 +7,7 @@ import chat from "@/api/chat.ts";
 import voiceInput from './components/VoiceInput.vue'
 import recordAudio from './components/RecordAudio.vue'
 import holdSpeak from './components/holdSpeak.vue'
+import MarkdownIt from 'markdown-it'
 
 
 const router = useRouter();
@@ -17,6 +18,8 @@ const messageCont = ref<any>(null)
 const isDialog = ref(false)
 const visualizerRef = ref();
 const isVoice = ref(false)
+
+const md = new MarkdownIt({ html: true })
 
 
 //  聊天信息置底
@@ -32,7 +35,6 @@ function toScrollBottom() {
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
-  holdSpeakRef.value?.start()
   chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
@@ -81,7 +83,7 @@ watchEffect(() => {
   if (webSocket.historyList[webSocket.historyList.length - 1]?.content) {
     toScrollBottom()
   }
-  if (webSocket.historyList[webSocket.historyList.length - 1]?.quick_options) {
+  if (webSocket.historyList[webSocket.historyList.length - 1]) {
     toScrollBottom()
   }
   // 当有推荐科室时，停止语音输入
@@ -135,6 +137,7 @@ const stopRecord = () => {
   holdSpeakRef.value?.stopRecordingAndUpload()
 }
 
+const holdSpeakStart = ref(false)
 </script>
 
 <template>
@@ -181,7 +184,7 @@ const stopRecord = () => {
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
                 <!-- <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" /> -->
                 <div>
-                  {{ item.content }}
+                  <span v-html="md.render(item.content)"></span>
                   <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
                     style="color: #2386FF;"
@@ -256,7 +259,8 @@ const stopRecord = () => {
             </div>
           </div> -->
           <div class="sendbox">
-            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png" @click="isVoice = true">
+            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
+              @click="holdSpeakStart ? '' : holdSpeakRef?.start(); holdSpeakStart = true; isVoice = true">
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="isVoice = false">
               <img alt="" src="@/assets/keyboard.png">
             </div>
@@ -745,7 +749,7 @@ const stopRecord = () => {
     box-sizing: border-box;
 
     .content {
-      height: calc(var(--vh) * 100 - 90px);
+      height: calc(100vh - 90px);
       overflow-y: auto;
       background-size: cover;
       padding-bottom: 20px;

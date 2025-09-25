@@ -14,7 +14,12 @@ const isSuccess = ref(false)
 const patient_name = ref('张丽')
 const confirm = () => {
   if (route.query.chat_id) {
-    chat.patients({ chat_id: parseInt(route.query.chat_id as string) }).then(res => {
+    chat.patients({
+      chat_id: parseInt(route.query.chat_id as string),
+      doctor_name: route.query.doctorName,
+      dept_name: route.query.departmentName,
+      consultate_time: route.query.date + ' ' + (route.query.time as string)?.split('-')[0] + ':00'
+    }).then(res => {
       patient_name.value = res.data.patient_name
       isSuccess.value = true
     })
