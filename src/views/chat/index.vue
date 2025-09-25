@@ -172,7 +172,7 @@ const holdSpeakStart = ref(false)
 
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
-            <div v-if="item.role == 'user'" class="infoCont">
+            <div v-if="item.role == 'user'" class="infoCont" ref="msgRefs">
               <div class="textCont">
                 <p>{{ item.content }}</p>
               </div>
@@ -199,7 +199,7 @@ const holdSpeakStart = ref(false)
               <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
                 style="color:#000">
                 <div class="tagList">
-                  <div v-for="name in item.quick_options" class="tagName" @click="sendTag(item, name)">
+                  <div v-for="name in item.quick_options" :key="name" class="tagName" @click="sendTag(item, name)">
                     {{ name }}
                   </div>
                 </div>
