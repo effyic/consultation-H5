@@ -138,6 +138,12 @@ const stopRecord = () => {
 }
 
 const holdSpeakStart = ref(false)
+
+const withdraw = (id: number) => {
+  chat.deleteMessages({ message_ids: [id, id + 1] }).then(res => {
+    webSocket.historyList = webSocket.historyList.filter(item => item.id !== id && item.id !== id + 1)
+  })
+}
 </script>
 
 <template>
@@ -173,8 +179,9 @@ const holdSpeakStart = ref(false)
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
             <div v-if="item.role == 'user'" class="infoCont" ref="msgRefs">
+              <img class="withdraw" @click="withdraw(item.id)" src="@/assets/withdraw.png" alt="">
               <div class="textCont">
-                <p>{{ item.content }}</p>
+                <div>{{ item.content }}</div>
               </div>
             </div>
             <!-- AI助手消息 -->
@@ -924,7 +931,13 @@ const holdSpeakStart = ref(false)
         .infoCont {
           display: flex;
           justify-content: end;
+          align-items: center;
           padding: 30px 0 0;
+
+          .withdraw {
+            width: 16px;
+            margin-right: 20px;
+          }
 
           .avatar {
             @include avatar-img;
@@ -947,6 +960,7 @@ const holdSpeakStart = ref(false)
           .textCont {
             //background: #e1effe;
             background: #529EEE4D;
+            max-width: calc(100% - 80px);
             font-size: 15px;
             //color: #101828;
             color: #000000D9;
@@ -954,7 +968,6 @@ const holdSpeakStart = ref(false)
             box-sizing: border-box;
             display: inline-block;
             border-radius: 15px;
-            white-space: pre-wrap;
             min-height: 48px;
           }
         }
