@@ -17,14 +17,15 @@ window.addEventListener(resizeEvent, setViewHeight)
 
 <style>
 :root {
-    --vh: 1vh;
-  }
+  --vh: 1vh;
+}
+
 /* 自定义失败 Toast 的样式 */
 .van-toast--fail {
   background-color: rgba(0, 0, 0, .7) !important;
 }
 
-:deep(.van-popup) {
-  background: rgba(0, 0, 0, .7) !important;
+.van-popup {
+  background: rgba(0, 0, 0, 0.7) !important;
 }
 </style>

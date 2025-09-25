@@ -35,7 +35,7 @@ function toScrollBottom() {
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
-  chatStore.questions()
+  // chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
     if (container) {
