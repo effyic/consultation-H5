@@ -118,6 +118,9 @@ const handleStart = () => {
 };
 const onTranscript = (text: string) => {
   webSocket.sendMessage(text)
+  nextTick(() => {
+    getHeight()
+  })
 };
 const handleStop = () => {
   visualizerRef.value.stop();
@@ -143,6 +146,12 @@ const withdraw = (id: number) => {
   chat.deleteMessages({ message_ids: [id, id + 1] }).then(res => {
     webSocket.historyList = webSocket.historyList.filter(item => item.id !== id && item.id !== id + 1)
   })
+}
+
+const getHeight = () => {
+  const target = document.getElementById('input') as HTMLTextAreaElement
+  target.style.height = 'auto'
+  target.style.height = target.scrollHeight + 'px'
 }
 </script>
 
@@ -270,9 +279,10 @@ const withdraw = (id: number) => {
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="isVoice = false">
               <img alt="" src="@/assets/keyboard.png">
             </div>
-            <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
-              @keydown.enter.stop="onTranscript(webSocket.userContext)">
-
+            <textarea id="input" rows="1" style="overflow: hidden" v-show="!isVoice"
+              v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
+              @keydown.enter.stop="onTranscript(webSocket.userContext)" @input="getHeight()">
+            </textarea>
             <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
               发送
             </div>
@@ -753,9 +763,11 @@ const withdraw = (id: number) => {
     //padding:24px 16px;
     padding: 16px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 
     .content {
-      height: calc(100vh - 90px);
+      flex: 1;
       overflow-y: auto;
       background-size: cover;
       padding-bottom: 20px;
@@ -1324,12 +1336,8 @@ const withdraw = (id: number) => {
 
   .Bottombox {
     width: calc(100vw - 32px);
-    height: 52px;
+    padding-top: 20px;
     box-sizing: border-box;
-    position: fixed;
-    bottom: 15px;
-    left: 16px;
-    z-index: 10;
 
     .audioPlaying {
       // display: flex;
@@ -1388,7 +1396,6 @@ const withdraw = (id: number) => {
 
     .defaultInputText {
       width: 100%;
-      height: 52px;
 
       .icon {
         display: inline-block;
@@ -1471,8 +1478,7 @@ const withdraw = (id: number) => {
 
       .sendbox {
         width: 100%;
-        height: 48px;
-        line-height: 48px;
+        min-height: 48px;
         z-index: 1;
         overflow: hidden;
         border-radius: 70px;
@@ -1485,8 +1491,9 @@ const withdraw = (id: number) => {
         justify-content: space-between;
         box-shadow: (0px 0px #0000, 0 0 #0000), (0px 0px #0000, 0px 0px #0000), 0px 2px 4px -2px rgba(16, 24, 40, .06), 0px 4px 8px -2px rgba(16, 24, 40, .1);
         // padding-bottom: 9px;
-        background: url("@/assets/sendBg.png") no-repeat;
+        // background: url("@/assets/sendBg.png") no-repeat;
         background-size: 100% 100%;
+        border: 2px solid #62ace9;
 
         img {
           width: 24px;
