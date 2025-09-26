@@ -20,7 +20,7 @@ export const useWebSocket = defineStore('webSocket', () => {
 
     // const protocol = window.location.protocol === 'https:' ? '' : 'ws:'
     // const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`
-    new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
+    ws.value = new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
 
     ws.value.onopen = () => {
       console.log('连接建立')
