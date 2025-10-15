@@ -16,11 +16,11 @@ export const useWebSocket = defineStore('webSocket', () => {
 
   const connectWebSocket = () => {
     // ws.value = new WebSocket('ws://192.168.0.16:8080/api/chat/ws')
-    // ws.value = new WebSocket('wss://cyh.effyic.com/api/chat/ws')
+    ws.value = new WebSocket('wss://cyh.effyic.com/api/chat/ws')
 
     // const protocol = window.location.protocol === 'https:' ? '' : 'ws:'
     // const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`
-    ws.value = new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
+    // ws.value = new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
 
     ws.value.onopen = () => {
       console.log('连接建立')
@@ -30,22 +30,36 @@ export const useWebSocket = defineStore('webSocket', () => {
       chat_id.value = data.chat_id
       chat_code.value = data.chat_code || ''
       const last = historyList.value[historyList.value.length - 1];
-      if (last.role === 'assistant') {
-        historyList.value[historyList.value.length - 1] = data
-      } else {
-        historyList.value[historyList.value.length - 1].content += data.content
-      }
-      // 判断是否结束
-      if (data.done) {
-        historyList.value[historyList.value.length - 1].id = data.id
-        historyList.value[historyList.value.length - 2].id = data.user_message_id
-      } else {
+      
+      if (last && last.role === 'assistant') {
+        // 更新助手消息内容
+        if (data.content) {
+          historyList.value[historyList.value.length - 1].content += data.content
+        }
+        
+        // 更新其他属性，保持现有数据
         if (data.quick_options) {
           historyList.value[historyList.value.length - 1].quick_options = data.quick_options
         }
         if (data.recommended_dept) {
           historyList.value[historyList.value.length - 1].recommended_dept = data.recommended_dept
           historyList.value[historyList.value.length - 1].recommended_doctor = data.recommended_doctor || ''
+        }
+        if (data.metadata) {
+          historyList.value[historyList.value.length - 1].metadata = data.metadata
+        }
+        if (data.upload_medical_record !== undefined) {
+          historyList.value[historyList.value.length - 1].upload_medical_record = data.upload_medical_record
+        }
+      }
+      
+      // 判断是否结束
+      if (data.done) {
+        if (historyList.value[historyList.value.length - 1]) {
+          historyList.value[historyList.value.length - 1].id = data.id
+        }
+        if (historyList.value[historyList.value.length - 2]) {
+          historyList.value[historyList.value.length - 2].id = data.user_message_id
         }
         isReplying.value = false;
       }

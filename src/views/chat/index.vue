@@ -222,7 +222,7 @@ const getHeight = () => {
               <div v-if="item.recommended_dept" class="recommendBox">
                 <div style="font-size: 14px;color: #333333;">
                   <span style="color: #666666;margin-right: 4px;">推荐至</span>
-                  {{ item.recommended_dept?.parent.name || '' }} {{ item.recommended_dept?.name || '' }}
+                  {{ item.recommended_dept?.parent?.name || '' }} {{ item.recommended_dept?.name || '' }}
                 </div>
                 <div class="recommendContainer">
                   <div class="department">
@@ -237,12 +237,12 @@ const getHeight = () => {
                     <div class="itemContent">
                       <div class="info">{{ item.recommended_dept?.desc || '' }}</div>
                       <div class="btn" @click="router.push({
-                        path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: {
-                          chat_id: webSocket.chat_id,
-                          departmentName: item.recommended_dept?.name || '',
-                          doctorName: item.recommended_doctor ? item.recommended_doctor : ''
-                        }
-                      })">
+    path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: {
+      chat_id: webSocket.chat_id,
+      departmentName: item.recommended_dept?.name || '',
+      doctorName: item.recommended_doctor ? item.recommended_doctor : ''
+    }
+  })">
                         去挂号
                       </div>
                     </div>
@@ -256,6 +256,9 @@ const getHeight = () => {
           </div>
         </div>
       </div>
+      <div class="AIcheck">
+        AI智能分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
+      </div>
       <div class="Bottombox">
         <div class="defaultInputText">
           <!-- <div class="sendbox">
@@ -263,7 +266,7 @@ const getHeight = () => {
             <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
               @keydown.enter.stop="onTranscript(webSocket.userContext)">
             <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
-            </voiceInput>
+            </voiceInput> 
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
               <img alt="" src="@/assets/voiceStop.png">
             </div>
@@ -280,7 +283,7 @@ const getHeight = () => {
               <img alt="" src="@/assets/keyboard.png">
             </div>
             <textarea id="input" rows="1" style="overflow: hidden" v-show="!isVoice"
-              v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
+              v-model.trim="webSocket.userContext" class="sendInput" placeholder="请描述病情症状持续时长、越详细推荐越准"
               @keydown.enter.stop="onTranscript(webSocket.userContext)" @input="getHeight()">
             </textarea>
             <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
@@ -1334,9 +1337,16 @@ const getHeight = () => {
     }
   }
 
+  .AIcheck {
+    font-size: 8px;
+    padding-top: 8px;
+    text-align: center;
+    margin: auto;
+  }
+
   .Bottombox {
     width: calc(100vw - 32px);
-    padding-top: 20px;
+    padding-top: 8px;
     box-sizing: border-box;
 
     .audioPlaying {
@@ -1501,7 +1511,7 @@ const getHeight = () => {
         }
 
         .sendInput {
-          font-size: 15px;
+          font-size: 12px;
           color: #333;
           font-weight: 400;
           background: transparent !important;
