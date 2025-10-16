@@ -1,4 +1,4 @@
-IMAGE_TAG=swr.cn-north-4.myhuaweicloud.com/registry-huawei/effyic/consultation-h5:latest
+IMAGE_TAG=swr.cn-north-4.myhuaweicloud.com/registry-huawei/effyic/consultation-h5-test:latest
 
 if [ "$1" == "prod" ]; then
   IMAGE_TAG=swr.cn-north-4.myhuaweicloud.com/registry-huawei/effyic/consultation-h5-hospital:latest
