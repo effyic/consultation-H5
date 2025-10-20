@@ -199,12 +199,12 @@ const getHeight = () => {
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
                 <div>
                   <span v-html="md.render(item.content)"></span>
-                  <!-- <span
+                  <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
                     style="color: #2386FF;"
                     @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
                     【上传】
-                  </span> -->
+                  </span>
                 </div>
               </div>
             </div>
@@ -245,7 +245,7 @@ const getHeight = () => {
                   </div>
                 </div>
               </div>
-              <div v-if="item.recommended_dept" class="chatAnswer">
+              <!-- <div v-if="item.recommended_dept" class="chatAnswer">
                 <div class="chatTxt">
                   <span>为方便医生提前全面了解您的病情，提供更好的诊疗服务，您可上传病例材料</span>
                   <div style="color: #2386FF;"
@@ -253,7 +253,7 @@ const getHeight = () => {
                     【上传】
                   </div>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>
