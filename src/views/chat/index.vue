@@ -197,17 +197,15 @@ const getHeight = () => {
             <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
               class="chatAnswer">
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
-                <!-- <div v-html="md.render(item.content ? removeSpaceAfterNumber(item.content) : '')" /> -->
                 <div>
                   <span v-html="md.render(item.content)"></span>
-                  <span
+                  <!-- <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
                     style="color: #2386FF;"
                     @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
                     【上传】
-                  </span>
+                  </span> -->
                 </div>
-
               </div>
             </div>
             <div v-if="item.role !== 'user'">
@@ -236,19 +234,23 @@ const getHeight = () => {
                     </div>
                     <div class="itemContent">
                       <div class="info">{{ item.recommended_dept?.desc || '' }}</div>
-                      <div class="btn" @click="router.push({
-    path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: {
-      chat_id: webSocket.chat_id,
-      departmentName: item.recommended_dept?.name || '',
-      doctorName: item.recommended_doctor ? item.recommended_doctor : ''
-    }
-  })">
+                      <div class="btn"
+                        @click="router.push({ path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept?.name || '', doctorName: item.recommended_doctor ? item.recommended_doctor : '' } })">
                         去挂号
                       </div>
                     </div>
                   </div>
                   <div class="msg">
                     没有符合的科室，选择<span @click="backPrev">其他科室</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="item.recommended_dept" class="chatAnswer">
+                <div class="chatTxt">
+                  <span>为方便医生提前全面了解您的病情，提供更好的诊疗服务，您可上传病例材料</span>
+                  <div style="color: #2386FF;"
+                    @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
+                    【上传】
                   </div>
                 </div>
               </div>
