@@ -14,7 +14,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 
 let audioContext: AudioContext | null = null
-let analyser: AnalyserNode | null = null
+let analyser: any = null
 let dataArray: Uint8Array | null = null
 let animationId: number | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -100,7 +100,7 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
 
   // 6. 噪声门限 - 静音时自动降噪
   const noiseGate = audioContext.createGain()
-  
+
   // 连接音频处理链
   source.connect(highpassFilter)
   highpassFilter.connect(lowpassFilter)
@@ -108,7 +108,7 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
   bandpassFilter.connect(compressorNode)
   compressorNode.connect(gainNode)
   gainNode.connect(noiseGate)
-  
+
   // 连接到分析器用于可视化
   noiseGate.connect(analyser)
 
@@ -118,7 +118,7 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
     if (analyser && dataArray && gainNode) {
       analyser.getByteFrequencyData(dataArray)
       const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length
-      
+
       // 如果音量过低，逐渐降低增益
       if (average < 10) {
         silenceTimer++
@@ -132,12 +132,12 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
         gainNode.gain.setValueAtTime(2.0, audioContext.currentTime)
       }
     }
-    
+
     if (audioContext && audioContext.state === 'running') {
       setTimeout(checkAudioLevel, 100)  // 每100ms检查一次
     }
   }
-  
+
   // 启动音频级别检查
   setTimeout(checkAudioLevel, 100)
 
@@ -224,7 +224,7 @@ const start = async () => {
         volume: 1.0                    // 音量
       }
     }
-    
+
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     audioContext = new AudioContext({ sampleRate: 16000 })
     const source = audioContext.createMediaStreamSource(stream)
@@ -238,7 +238,7 @@ const start = async () => {
 
     // 使用音频处理链进行降噪和增强
     const processedOutput = createAudioProcessingChain(audioContext, source)
-    
+
     draw()
 
     // 为录音创建一个新的音频流，包含处理后的音频
