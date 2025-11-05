@@ -6,11 +6,11 @@ export const useWebSocket = defineStore('webSocket', () => {
   const userContext = ref('')
   const ws = ref<any>(null) // WebSocket 实例
   let reconnectTimeout: any = null // 重连超时控制
-  const chat_id = ref(0)
+  const chat_id = ref(0)//会话id
   const historyList = ref<any[]>([]) // 问答数组
   const hos_code = ref<any>('1') //小程序给的院区id
   const medical_record_no = ref<any>('') //小程序的就诊人id
-  const chat_code = ref<any>('') //会话id
+  const chat_code = ref<any>('') 
   const isReplying = ref(false)
   const step = ref('recommend')
 
@@ -161,7 +161,9 @@ export const useWebSocket = defineStore('webSocket', () => {
     connectWebSocket,
     sendMessage,
     checkConnectionStatus,
-    finsh
+    finsh,
+    medical_record_no,
+    hos_code
   }
 }
 )

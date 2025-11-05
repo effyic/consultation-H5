@@ -1,24 +1,19 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useWebSocket } from "@/stores/websocket.ts";
-import { useChat } from "@/stores/chatService.ts";
 import { useRoute, useRouter } from 'vue-router';
 import chat from "@/api/chat.ts";
-import voiceInput from './components/VoiceInput.vue'
-import recordAudio from './components/RecordAudio.vue'
 import holdSpeak from './components/holdSpeak.vue'
 import MarkdownIt from 'markdown-it'
 
 
 const router = useRouter();
 const route = useRoute();
-const chatStore = useChat();
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
 const isDialog = ref(false)
 const visualizerRef = ref();
 const isVoice = ref(false)
-
 const md = new MarkdownIt({ html: true })
 
 
@@ -35,7 +30,6 @@ function toScrollBottom() {
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
-  // chatStore.questions()
   nextTick(() => {
     const container = messageCont.value
     if (container) {
@@ -45,6 +39,10 @@ onMounted(() => {
         scroll-behavior: smooth;
       `
     }
+    //获取小程序参数
+    webSocket.hos_code = parseInt(route.query.hos_code as string) || '1'
+    webSocket.medical_record_no = parseInt(route.query.medical_record_no as string) || ''
+
     webSocket.connectWebSocket()
     // 每隔 5 秒检查一次 WebSocket 状态
     if (route.query.chat_id) {
@@ -111,21 +109,14 @@ onUnmounted(() => {
   }
 })
 
-const handleStart = () => {
-  isVoice.value = true
-  visualizerRef.value.start();
-  visualizerRef.value.setAutoSend(true)
-};
+
 const onTranscript = (text: string) => {
   webSocket.sendMessage(text)
   nextTick(() => {
     getHeight()
   })
 };
-const handleStop = () => {
-  visualizerRef.value.stop();
-  isVoice.value = false
-};
+
 const isRecording = ref(false)
 
 const holdSpeakRef = ref()
@@ -152,6 +143,34 @@ const getHeight = () => {
   const target = document.getElementById('input') as HTMLTextAreaElement
   target.style.height = 'auto'
   target.style.height = target.scrollHeight + 'px'
+}
+
+const handleGoWX = (dept: any) => {
+  // 从推荐科室对象与全局会话中提取参数
+  const wxObj = (window as any).wx
+  const deptCode = dept.code
+  const chatCode = webSocket.chat_id
+  const courtyardCode = webSocket.hos_code
+  const patId = webSocket.medical_record_no
+
+  const url = `/book-offline/doc-list/index?deptCode=${encodeURIComponent(String(deptCode))}` +
+    `&chatCode=${encodeURIComponent(String(chatCode))}` +
+    `&courtyardCode=${encodeURIComponent(String(courtyardCode))}` +
+    `&patId=${encodeURIComponent(String(patId))}`
+
+  // 优先在微信小程序 WebView 环境内跳转
+  if (wxObj?.miniProgram?.navigateTo) {
+    try {
+      wxObj.miniProgram.navigateTo({ url })
+    } catch (e) {
+      console.error('navigateTo 调用失败:', e)
+      alert('跳转失败，请在微信小程序内重试')
+    }
+  } else {
+    // 非小程序环境的兜底处理
+    console.warn('未检测到微信小程序环境，无法跳转。目标URL:', url)
+    alert('请在微信小程序内打开进行挂号')
+  }
 }
 </script>
 
@@ -234,8 +253,7 @@ const getHeight = () => {
                     </div>
                     <div class="itemContent">
                       <div class="info">{{ item.recommended_dept?.desc || '' }}</div>
-                      <div class="btn"
-                        @click="router.push({ path: item.recommended_doctor ? '/doctorDetail' : '/reserve', query: { chat_id: webSocket.chat_id, departmentName: item.recommended_dept?.name || '', doctorName: item.recommended_doctor ? item.recommended_doctor : '' } })">
+                      <div class="btn" @click="handleGoWX(item.recommended_dept)">
                         去挂号
                       </div>
                     </div>
@@ -263,21 +281,6 @@ const getHeight = () => {
       </div>
       <div class="Bottombox">
         <div class="defaultInputText">
-          <!-- <div class="sendbox">
-            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png" @click="handleStart">
-            <input v-show="!isVoice" v-model.trim="webSocket.userContext" class="sendInput" placeholder="请输入您想要咨询的问题"
-              @keydown.enter.stop="onTranscript(webSocket.userContext)">
-            <voiceInput v-show="isVoice" ref="visualizerRef" @transcript="onTranscript">
-            </voiceInput> 
-            <div v-if="isVoice" style="display: flex;align-items: center;" @click="handleStop">
-              <img alt="" src="@/assets/voiceStop.png">
-            </div>
-            <div v-if="!isVoice" style="display: flex;align-items: center;">
-              <div class="sendBtn" @click="onTranscript(webSocket.userContext)">
-                发送
-              </div>
-            </div>
-          </div> -->
           <div class="sendbox">
             <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
               @click="holdSpeakStart ? '' : holdSpeakRef?.start(); holdSpeakStart = true; isVoice = true">
