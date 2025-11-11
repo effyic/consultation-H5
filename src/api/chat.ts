@@ -5,35 +5,25 @@ class ChatApi {
   questions() {
     return apiClient.get('faq/common-questions')
   }
-
-  //挂号信息
-  summary(id: any) {
-    return apiClient.get(`chat/${id}/summary`)
-  }
-
   //历史记录
   history(id: any) {
-    return apiClient.get(`chat/${id}/history`)
+    return apiClient.get(`chat/h5/${id}/history`)
   }
   //就诊类型
   visitType(id: any) {
-    return apiClient.get(`chat/${id}/visit_type`)
+    return apiClient.get(`chat/h5/${id}/visit_type`)
   }
 
   //上传病例
   upload(id: any, data: any) {
-    return apiClient.postForm(`chat/${id}/upload`, data)
+    return apiClient.postForm(`chat/h5/${id}/upload`, data)
   }
 
   //获取上传病例资料
   medical(id: any) {
-    return apiClient.get(`chat/${id}/medical`)
+    return apiClient.get(`chat/h5/${id}/medical`)
   }
 
-  //创建患者信息
-  patients(data: any) {
-    return apiClient.post(`patients/create`, data)
-  }
 
   //删除回话记录
   deleteMessages(data: any) {

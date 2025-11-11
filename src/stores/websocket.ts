@@ -10,11 +10,12 @@ export const useWebSocket = defineStore('webSocket', () => {
   const registration_no = ref<any>(null)//挂号流水号
   const historyList = ref<any[]>([]) // 问答数组·
   const hos_code = ref<string>('1') //小程序给的院区id（字符串类型）
-  const patId = ref<any>('') //小程序的就诊人id
+  const medical_record_no = ref<any>('')//小程序的就诊人id
+  const patId = ref<any>('') 
   const cardNo = ref<any>('')
   const isReplying = ref(false)
   const step = ref('recommend')
-  const SourceType = ref('小程序')
+  const SourceType = ref<any>('wx')
 
   const connectWebSocket = () => {
     // ws.value = new WebSocket('wss://cyh-test.effyic.com/api/chat/ws')
@@ -28,6 +29,12 @@ export const useWebSocket = defineStore('webSocket', () => {
     }
     ws.value.onmessage = (e: any) => {
       const data = JSON.parse(e.data); // 转换为对象
+      if (data.type === 'error') {
+        isReplying.value = false;
+        showToast(data.error)
+        historyList.value[historyList.value.length - 1].content = '系统错误'
+        return  false
+      }
       chat_id.value = data.chat_id
       const last = historyList.value[historyList.value.length - 1];
       
@@ -117,9 +124,8 @@ export const useWebSocket = defineStore('webSocket', () => {
         hos_code: hos_code.value,
         chat_id: chat_id.value,
         step: step.value,
-        medical_record_no: patId.value,
+        medical_record_no: medical_record_no.value,
         registration_no:registration_no.value,
-        cardNo:cardNo.value,
         id: 0
       }
       historyList.value.push(user)
@@ -143,9 +149,8 @@ export const useWebSocket = defineStore('webSocket', () => {
       hos_code: hos_code.value,
       chat_id: chat_id.value,
       step: step.value,
-      medical_record_no: patId.value,
+      medical_record_no: medical_record_no.value,
       registration_no:registration_no.value,
-      cardNo:cardNo.value,
     }
     let assistantData = {
       role: 'assistant',
@@ -168,7 +173,8 @@ export const useWebSocket = defineStore('webSocket', () => {
     cardNo,
     hos_code,
     SourceType,
-    registration_no
+    registration_no,
+    medical_record_no
   }
 }
 )

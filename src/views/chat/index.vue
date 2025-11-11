@@ -13,6 +13,7 @@ const route = useRoute();
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
 const isDialog = ref(false)
+const inputRef = ref<HTMLTextAreaElement | null>(null)
 const visualizerRef = ref();
 const isVoice = ref(false)
 const md = new MarkdownIt({ html: true })
@@ -32,6 +33,13 @@ const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
   console.log('window', window.location.href)
+  if (inputRef.value) {
+    inputRef.value.addEventListener('focus', () => {
+      setTimeout(() => {
+        toScrollBottom()  // 软键盘弹起后滚动到底部
+      }, 300) // 延迟可保证软键盘弹起完成
+    })
+  }
   nextTick(() => {
     const container = messageCont.value
     if (container) {
@@ -41,24 +49,25 @@ onMounted(() => {
         scroll-behavior: smooth;
       `
     }
-
+    // 获取小程序参数（院区编码为字符串）
+    webSocket.hos_code = route.query.hos_code ? String(route.query.hos_code) : '1'
+    webSocket.medical_record_no = route.query.medical_record_no ? String(route.query.medical_record_no) : ''
+    webSocket.patId = route.query.pat_id ? String(route.query.pat_id) : ''
+    webSocket.cardNo = route.query.card_no ? String(route.query.card_no) : ''
+    webSocket.registration_no = route.query.registration_no ? String(route.query.registration_no) : ''
+    webSocket.SourceType = route.query.type
     webSocket.connectWebSocket()
     // 每隔 5 秒检查一次 WebSocket 状态
-    if (route.query.registration_no) {
+    if (webSocket.registration_no) {
       if (route.query.isCase) {
-        chat.medical(parseInt(route.query.registration_no as string)).then(res => {
+        chat.medical(webSocket.registration_no).then(res => {
           imgList.value = res.data
           isCase.value = true
         })
       }
-      webSocket.registration_no = parseInt(route.query.registration_no as string)
       webSocket.step = 'collect'
       getHistory()
     } else {
-      // 获取小程序参数（院区编码为字符串）
-      webSocket.hos_code = route.query.hos_code ? String(route.query.hos_code) : '1'
-      webSocket.patId = route.query.patId ? String(route.query.pat_id) : ''
-      webSocket.cardNo = route.query.cardNo ? String(route.query.card_no) : ''
       webSocket.step = 'recommend'
     }
     setInterval(webSocket.checkConnectionStatus, 5000);
@@ -161,8 +170,8 @@ const handleGoWX = (dept: any) => {
   console.log('url', url)
 
   // 优先在微信小程序 WebView 环境内跳转
-  if (wx.miniProgram?.navigateTo) {
-    wx.miniProgram.navigateTo({ url })
+  if (wx.miniProgram?.redirectTo) {
+    wx.miniProgram.redirectTo({ url })
   } else {
     // 非小程序环境的兜底处理
     console.warn('未检测到微信小程序环境，无法跳转。目标URL:', url)
@@ -216,8 +225,16 @@ const handleGoWX = (dept: any) => {
                   <span v-html="md.render(item.content)"></span>
                   <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
-                    style="color: #2386FF;"
-                    @click="router.push({ path: '/caseMaterial', query: { registration_no: webSocket.registration_no } })">
+                    style="color: #2386FF;" @click="router.push({
+    path: '/caseMaterial', query: {
+      hos_code: webSocket.hos_code,
+      medical_record_no: webSocket.medical_record_no,
+      pat_id: webSocket.patId,
+      card_no: webSocket.cardNo,
+      type: webSocket.SourceType,
+      registration_no: webSocket.registration_no
+    }
+  })">
                     【上传】
                   </span>
                 </div>
@@ -264,7 +281,7 @@ const handleGoWX = (dept: any) => {
         </div>
       </div>
       <div class="AIcheck">
-        AI智能4分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
+        AI智能分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
       </div>
       <div class="Bottombox">
         <div class="defaultInputText">
@@ -274,7 +291,7 @@ const handleGoWX = (dept: any) => {
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="isVoice = false">
               <img alt="" src="@/assets/keyboard.png">
             </div>
-            <textarea id="input" rows="1" style="overflow: hidden" v-show="!isVoice"
+            <textarea id="input" ref="inputRef" rows="1" style="overflow: hidden" v-show="!isVoice"
               v-model.trim="webSocket.userContext" class="sendInput" placeholder="请描述病情症状持续时长、越详细推荐越准"
               @keydown.enter.stop="onTranscript(webSocket.userContext)" @input="getHeight()">
             </textarea>
@@ -897,36 +914,7 @@ const handleGoWX = (dept: any) => {
         }
       }
 
-      .stopMessage {
-        position: fixed;
-        bottom: 70px;
-        width: 95%;
-        text-align: center;
-        border-radius: 10px;
-        color: #fff;
-        display: inline-grid;
-        margin-bottom: 5px;
 
-        .stopBtn {
-          width: 82px;
-          height: 32px;
-          background: #fff;
-          box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-          border-radius: 20px;
-          margin: 0 auto;
-          cursor: pointer;
-          display: flex;
-          justify-content: center;
-          font-size: 12px;
-          align-items: center;
-          color: #0A1629;
-
-          .stopIcon {
-            width: 16px;
-            height: 16px;
-          }
-        }
-      }
 
       .responseCont {
 
@@ -1365,36 +1353,7 @@ const handleGoWX = (dept: any) => {
       margin-top: 5px;
     }
 
-    .stopMessage {
-      position: fixed;
-      bottom: 70px;
-      width: 95%;
-      text-align: center;
-      border-radius: 10px;
-      color: #fff;
-      display: inline-grid;
-      margin-bottom: 5px;
 
-      .stopBtn {
-        width: 82px;
-        height: 32px;
-        background: #fff;
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 20px;
-        margin: 0 auto;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        font-size: 12px;
-        align-items: center;
-        color: #0A1629;
-
-        .stopIcon {
-          width: 16px;
-          height: 16px;
-        }
-      }
-    }
 
     .defaultInputText {
       width: 100%;

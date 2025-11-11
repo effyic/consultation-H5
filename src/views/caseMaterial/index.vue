@@ -6,12 +6,10 @@ import { ElLoading, ElMessage, type UploadUserFile } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
-
-const active = ref(0);
 const goback = () => {
   router.go(-1)
 }
-
+console.log('window', window.location.href)
 
 const fileList = ref<UploadUserFile[]>([])
 
@@ -41,10 +39,6 @@ const handleExceed = () => {
 const httpRequest = async (option: any) => {
   return
 }
-const isImage = (file: any) => {
-  const type = file.raw?.type || file.type
-  return type?.startsWith('image/')
-}
 // 删除文件
 const removeFile = (index: number) => {
   fileList.value.splice(index, 1)
@@ -61,7 +55,7 @@ const submit = async () => {
   fileList.value.forEach(file => {
     formData.append('files', file.raw!) // file.raw 是 UploadRawFile
   })
-  chat.upload(parseInt(route.query.registration_no as string), formData).then(res => {
+  chat.upload(String(route.query.registration_no), formData).then(res => {
     isSuccess.value = true
     loading.close()
   })
@@ -70,7 +64,6 @@ const submit = async () => {
 
 <template>
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png" @click="goback" />
     <div>病例材料</div>
   </div>
   <div class="container" v-if="!isSuccess">
@@ -100,8 +93,17 @@ const submit = async () => {
   <div class="submit">
     <div v-if="!isSuccess" class="btn" :class="{ disabled: fileList.length == 0 }" dis
       @click="fileList.length == 0 ? '' : submit()">提交</div>
-    <div v-if="isSuccess" class="btn"
-      @click=" router.push({ path: '/chat', query: { registration_no: route.query.registration_no, isCase: 1 } })">
+    <div v-if="isSuccess" class="btn" @click=" router.push({
+    path: '/chat', query: {
+      registration_no: String(route.query.registration_no),
+      isCase: 1,
+      hos_code: String(route.query.hos_code),
+      medical_record_no: String(route.query.medical_record_no),
+      pat_id: String(route.query.pat_id),
+      card_no: String(route.query.card_no),
+      type: route.query.type,
+    }
+  })">
       返回首页</div>
   </div>
 </template>
