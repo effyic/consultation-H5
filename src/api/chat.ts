@@ -7,26 +7,26 @@ class ChatApi {
   }
 
   //挂号信息
-  summary(id: number) {
+  summary(id: any) {
     return apiClient.get(`chat/${id}/summary`)
   }
 
   //历史记录
-  history(id: number) {
+  history(id: any) {
     return apiClient.get(`chat/${id}/history`)
   }
   //就诊类型
-  visitType(id: number) {
+  visitType(id: any) {
     return apiClient.get(`chat/${id}/visit_type`)
   }
 
   //上传病例
-  upload(id: number, data: any) {
+  upload(id: any, data: any) {
     return apiClient.postForm(`chat/${id}/upload`, data)
   }
 
   //获取上传病例资料
-  medical(id: number) {
+  medical(id: any) {
     return apiClient.get(`chat/${id}/medical`)
   }
 

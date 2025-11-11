@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import chat from "@/api/chat.ts";
 import holdSpeak from './components/holdSpeak.vue'
 import MarkdownIt from 'markdown-it'
+import wx from 'weixin-js-sdk'
 
 
 const router = useRouter();
@@ -30,6 +31,7 @@ function toScrollBottom() {
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
+  console.log('window', window.location.href)
   nextTick(() => {
     const container = messageCont.value
     if (container) {
@@ -39,23 +41,24 @@ onMounted(() => {
         scroll-behavior: smooth;
       `
     }
-    //获取小程序参数
-    webSocket.hos_code = parseInt(route.query.hos_code as string) || '1'
-    webSocket.medical_record_no = parseInt(route.query.medical_record_no as string) || ''
 
     webSocket.connectWebSocket()
     // 每隔 5 秒检查一次 WebSocket 状态
-    if (route.query.chat_id) {
+    if (route.query.registration_no) {
       if (route.query.isCase) {
-        chat.medical(parseInt(route.query.chat_id as string)).then(res => {
+        chat.medical(parseInt(route.query.registration_no as string)).then(res => {
           imgList.value = res.data
           isCase.value = true
         })
       }
-      webSocket.chat_id = parseInt(route.query.chat_id as string)
+      webSocket.registration_no = parseInt(route.query.registration_no as string)
       webSocket.step = 'collect'
       getHistory()
     } else {
+      // 获取小程序参数（院区编码为字符串）
+      webSocket.hos_code = route.query.hos_code ? String(route.query.hos_code) : '1'
+      webSocket.patId = route.query.patId ? String(route.query.pat_id) : ''
+      webSocket.cardNo = route.query.cardNo ? String(route.query.card_no) : ''
       webSocket.step = 'recommend'
     }
     setInterval(webSocket.checkConnectionStatus, 5000);
@@ -64,9 +67,9 @@ onMounted(() => {
 
 const isFirst = ref(true)
 const getHistory = () => {
-  chat.history(webSocket.chat_id).then(res => {
+  chat.history(webSocket.registration_no).then(res => {
     webSocket.historyList = res.data.chat.messages.filter((item: any) => item.content !== '')
-    chat.visitType(webSocket.chat_id).then(res => {
+    chat.visitType(webSocket.registration_no).then(res => {
       isFirst.value = res.data.visit_type == "first_visit"
     })
     if (JSON.parse(webSocket.historyList[webSocket.historyList.length - 1].metadata).recommended_dept) {
@@ -97,11 +100,7 @@ function sendTag(item: any, name: string) {
   webSocket.sendMessage(name)
 }
 
-function backPrev() {
-  router.push({
-    name: 'department',
-  })
-}
+
 
 onUnmounted(() => {
   if (webSocket.ws) {
@@ -147,29 +146,27 @@ const getHeight = () => {
 
 const handleGoWX = (dept: any) => {
   // 从推荐科室对象与全局会话中提取参数
-  const wxObj = (window as any).wx
   const deptCode = dept.code
   const chatCode = webSocket.chat_id
   const courtyardCode = webSocket.hos_code
-  const patId = webSocket.medical_record_no
+  const patId = webSocket.patId
+  const cardNo = webSocket.cardNo
+  const url = `/book-offline/doc-list/index?deptCode=${String(deptCode)}` +
+    `&chatCode=${String(chatCode)}` +
+    `&courtyardCode=${String(courtyardCode)}` +
+    `&patId=${String(patId)}` +
+    `&cardNo=${String(cardNo)}`
 
-  const url = `/book-offline/doc-list/index?deptCode=${encodeURIComponent(String(deptCode))}` +
-    `&chatCode=${encodeURIComponent(String(chatCode))}` +
-    `&courtyardCode=${encodeURIComponent(String(courtyardCode))}` +
-    `&patId=${encodeURIComponent(String(patId))}`
+
+  console.log('url', url)
 
   // 优先在微信小程序 WebView 环境内跳转
-  if (wxObj?.miniProgram?.navigateTo) {
-    try {
-      wxObj.miniProgram.navigateTo({ url })
-    } catch (e) {
-      console.error('navigateTo 调用失败:', e)
-      alert('跳转失败，请在微信小程序内重试')
-    }
+  if (wx.miniProgram?.navigateTo) {
+    wx.miniProgram.navigateTo({ url })
   } else {
     // 非小程序环境的兜底处理
     console.warn('未检测到微信小程序环境，无法跳转。目标URL:', url)
-    alert('请在微信小程序内打开进行挂号')
+    alert('请在微信小程序中跳转')
   }
 }
 </script>
@@ -180,7 +177,6 @@ const handleGoWX = (dept: any) => {
     <holdSpeak ref="holdSpeakRef" @transcript="onTranscript"></holdSpeak>
   </div>
   <div class="headerTab">
-    <img alt="返回" src="@/assets/back1.png" @click="backPrev" />
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
@@ -221,7 +217,7 @@ const handleGoWX = (dept: any) => {
                   <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
                     style="color: #2386FF;"
-                    @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
+                    @click="router.push({ path: '/caseMaterial', query: { registration_no: webSocket.registration_no } })">
                     【上传】
                   </span>
                 </div>
@@ -258,26 +254,17 @@ const handleGoWX = (dept: any) => {
                       </div>
                     </div>
                   </div>
-                  <div class="msg">
+                  <!-- <div class="msg">
                     没有符合的科室，选择<span @click="backPrev">其他科室</span>
-                  </div>
+                  </div> -->
                 </div>
               </div>
-              <!-- <div v-if="item.recommended_dept" class="chatAnswer">
-                <div class="chatTxt">
-                  <span>为方便医生提前全面了解您的病情，提供更好的诊疗服务，您可上传病例材料</span>
-                  <div style="color: #2386FF;"
-                    @click="router.push({ path: '/caseMaterial', query: { chat_id: webSocket.chat_id } })">
-                    【上传】
-                  </div>
-                </div>
-              </div> -->
             </div>
           </div>
         </div>
       </div>
       <div class="AIcheck">
-        AI智能分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
+        AI智能4分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
       </div>
       <div class="Bottombox">
         <div class="defaultInputText">

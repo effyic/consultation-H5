@@ -7,20 +7,21 @@ export const useWebSocket = defineStore('webSocket', () => {
   const ws = ref<any>(null) // WebSocket 实例
   let reconnectTimeout: any = null // 重连超时控制
   const chat_id = ref(0)//会话id
-  const historyList = ref<any[]>([]) // 问答数组
-  const hos_code = ref<any>('1') //小程序给的院区id
-  const medical_record_no = ref<any>('') //小程序的就诊人id
-  const chat_code = ref<any>('') 
+  const registration_no = ref<any>(null)//挂号流水号
+  const historyList = ref<any[]>([]) // 问答数组·
+  const hos_code = ref<string>('1') //小程序给的院区id（字符串类型）
+  const patId = ref<any>('') //小程序的就诊人id
+  const cardNo = ref<any>('')
   const isReplying = ref(false)
   const step = ref('recommend')
+  const SourceType = ref('小程序')
 
   const connectWebSocket = () => {
-    // ws.value = new WebSocket('ws://192.168.0.16:8080/api/chat/ws')
-    ws.value = new WebSocket('wss://cyh-test.effyic.com/api/chat/ws')
+    // ws.value = new WebSocket('wss://cyh-test.effyic.com/api/chat/ws')
 
     // const protocol = window.location.protocol === 'https:' ? '' : 'ws:'
     // const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`
-    // ws.value = new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
+    ws.value = new WebSocket('wss://pre-consultation.bjcyh.mobi/api/chat/ws')
 
     ws.value.onopen = () => {
       console.log('连接建立')
@@ -28,7 +29,6 @@ export const useWebSocket = defineStore('webSocket', () => {
     ws.value.onmessage = (e: any) => {
       const data = JSON.parse(e.data); // 转换为对象
       chat_id.value = data.chat_id
-      chat_code.value = data.chat_code || ''
       const last = historyList.value[historyList.value.length - 1];
       
       if (last && last.role === 'assistant') {
@@ -117,8 +117,9 @@ export const useWebSocket = defineStore('webSocket', () => {
         hos_code: hos_code.value,
         chat_id: chat_id.value,
         step: step.value,
-        chat_code: chat_code.value,
-        medical_record_no: medical_record_no.value,
+        medical_record_no: patId.value,
+        registration_no:registration_no.value,
+        cardNo:cardNo.value,
         id: 0
       }
       historyList.value.push(user)
@@ -142,8 +143,9 @@ export const useWebSocket = defineStore('webSocket', () => {
       hos_code: hos_code.value,
       chat_id: chat_id.value,
       step: step.value,
-      chat_code: chat_code.value,
-      medical_record_no: medical_record_no.value,
+      medical_record_no: patId.value,
+      registration_no:registration_no.value,
+      cardNo:cardNo.value,
     }
     let assistantData = {
       role: 'assistant',
@@ -162,8 +164,11 @@ export const useWebSocket = defineStore('webSocket', () => {
     sendMessage,
     checkConnectionStatus,
     finsh,
-    medical_record_no,
-    hos_code
+    patId,
+    cardNo,
+    hos_code,
+    SourceType,
+    registration_no
   }
 }
 )

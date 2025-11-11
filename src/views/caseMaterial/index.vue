@@ -61,7 +61,7 @@ const submit = async () => {
   fileList.value.forEach(file => {
     formData.append('files', file.raw!) // file.raw 是 UploadRawFile
   })
-  chat.upload(parseInt(route.query.chat_id as string), formData).then(res => {
+  chat.upload(parseInt(route.query.registration_no as string), formData).then(res => {
     isSuccess.value = true
     loading.close()
   })
@@ -101,7 +101,7 @@ const submit = async () => {
     <div v-if="!isSuccess" class="btn" :class="{ disabled: fileList.length == 0 }" dis
       @click="fileList.length == 0 ? '' : submit()">提交</div>
     <div v-if="isSuccess" class="btn"
-      @click=" router.push({ path: '/chat', query: { chat_id: route.query.chat_id, isCase: 1 } })">
+      @click=" router.push({ path: '/chat', query: { registration_no: route.query.registration_no, isCase: 1 } })">
       返回首页</div>
   </div>
 </template>
