@@ -12,12 +12,12 @@ import 'element-plus/dist/index.css'
 
 import 'virtual:svg-icons-register'
 const app = createApp(App)
-const vconsole:any = new VConsole()
+// const vconsole:any = new VConsole()
 
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
-app.use(vconsole)
+// app.use(vconsole)
 
 app.use(globalComponent)
 app.mount('#app')
