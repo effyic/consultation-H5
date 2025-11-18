@@ -1,23 +1,24 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
-import { useWebSocket } from "@/stores/websocket.ts";
-import { useRoute, useRouter } from 'vue-router';
-import chat from "@/api/chat.ts";
-import holdSpeak from './components/holdSpeak.vue'
 import MarkdownIt from 'markdown-it'
+import { showToast } from 'vant'
+import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import wx from 'weixin-js-sdk'
+import chat from '@/api/chat.ts'
+import { useWebSocket } from '@/stores/websocket.ts'
+import holdSpeak from './components/holdSpeak.vue'
+import SubmitFeedback from './components/SubmitFeedback.vue'
+import { changeHandle, fetchHandle, submitFeedbackRes } from './hooks/useFeedback'
 
-
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 const webSocket = useWebSocket()
 const messageCont = ref<any>(null)
 const isDialog = ref(false)
 const inputRef = ref<HTMLTextAreaElement | null>(null)
-const visualizerRef = ref();
+const visualizerRef = ref()
 const isVoice = ref(false)
 const md = new MarkdownIt({ html: true })
-
 
 //  聊天信息置底
 function toScrollBottom() {
@@ -36,7 +37,7 @@ onMounted(() => {
   if (inputRef.value) {
     inputRef.value.addEventListener('focus', () => {
       setTimeout(() => {
-        toScrollBottom()  // 软键盘弹起后滚动到底部
+        toScrollBottom() // 软键盘弹起后滚动到底部
       }, 300) // 延迟可保证软键盘弹起完成
     })
   }
@@ -50,7 +51,7 @@ onMounted(() => {
       `
     }
     // 获取小程序参数（院区编码为字符串）
-    webSocket.hos_code = route.query.hos_code ? String(route.query.hos_code) : '1'
+    webSocket.hos_code = route.query.hos_code ? String(route.query.hos_code) : '11010500'
     webSocket.medical_record_no = route.query.medical_record_no ? String(route.query.medical_record_no) : ''
     webSocket.patId = route.query.pat_id ? String(route.query.pat_id) : ''
     webSocket.cardNo = route.query.card_no ? String(route.query.card_no) : ''
@@ -60,26 +61,27 @@ onMounted(() => {
     // 每隔 5 秒检查一次 WebSocket 状态
     if (webSocket.registration_no) {
       if (route.query.isCase) {
-        chat.medical(webSocket.registration_no).then(res => {
+        chat.medical(webSocket.registration_no).then((res) => {
           imgList.value = res.data
           isCase.value = true
         })
       }
       webSocket.step = 'collect'
       getHistory()
-    } else {
+    }
+    else {
       webSocket.step = 'recommend'
     }
-    setInterval(webSocket.checkConnectionStatus, 5000);
+    setInterval(webSocket.checkConnectionStatus, 5000)
   })
 })
 
 const isFirst = ref(true)
-const getHistory = () => {
-  chat.history(webSocket.registration_no).then(res => {
+function getHistory() {
+  chat.history(webSocket.registration_no).then((res) => {
     webSocket.historyList = res.data.chat.messages.filter((item: any) => item.content !== '')
-    chat.visitType(webSocket.registration_no).then(res => {
-      isFirst.value = res.data.visit_type == "first_visit"
+    chat.visitType(webSocket.registration_no).then((res) => {
+      isFirst.value = res.data.visit_type == 'first_visit'
     })
     if (JSON.parse(webSocket.historyList[webSocket.historyList.length - 1].metadata).recommended_dept) {
       setTimeout(() => {
@@ -98,8 +100,9 @@ watchEffect(() => {
   }
   // 当有推荐科室时，停止语音输入
   if (webSocket.historyList[webSocket.historyList.length - 1]?.recommended_dept) {
-    isVoice.value = false;
-    visualizerRef.value?.stop();
+    changeHandle(webSocket.historyList[webSocket.historyList.length - 1]?.id)
+    isVoice.value = false
+    visualizerRef.value?.stop()
     toScrollBottom()
   }
 })
@@ -109,88 +112,104 @@ function sendTag(item: any, name: string) {
   webSocket.sendMessage(name)
 }
 
-
-
 onUnmounted(() => {
   if (webSocket.ws) {
-    webSocket.ws.close(); // 组件销毁时关闭 WebSocket 连接
+    webSocket.ws.close() // 组件销毁时关闭 WebSocket 连接
   }
 })
 
-
-const onTranscript = (text: string) => {
+function onTranscript(text: string) {
   webSocket.sendMessage(text)
   nextTick(() => {
     getHeight()
   })
-};
+}
 
 const isRecording = ref(false)
 
 const holdSpeakRef = ref()
-const startRecord = async () => {
+async function startRecord() {
   navigator.vibrate?.(200)
   isRecording.value = true
   holdSpeakRef.value?.startRecording()
 }
 
-const stopRecord = () => {
+function stopRecord() {
   isRecording.value = false
   holdSpeakRef.value?.stopRecordingAndUpload()
 }
 
 const holdSpeakStart = ref(false)
 
-const withdraw = (id: number) => {
-  chat.deleteMessages({ message_ids: [id, id + 1] }).then(res => {
+function withdraw(id: number) {
+  chat.deleteMessages({ message_ids: [id, id + 1] }).then((res) => {
     webSocket.historyList = webSocket.historyList.filter(item => item.id !== id && item.id !== id + 1)
   })
 }
 
-const getHeight = () => {
+function getHeight() {
   const target = document.getElementById('input') as HTMLTextAreaElement
   target.style.height = 'auto'
-  target.style.height = target.scrollHeight + 'px'
+  if (target.value) {
+    target.style.height = `${target.scrollHeight}px`
+  }
 }
 
-const handleGoWX = (dept: any) => {
+function handleGoWX(dept: any) {
   // 从推荐科室对象与全局会话中提取参数
   const deptCode = dept.code
   const chatCode = webSocket.chat_id
   const courtyardCode = webSocket.hos_code
   const patId = webSocket.patId
   const cardNo = webSocket.cardNo
-  const url = `/book-offline/doc-list/index?deptCode=${String(deptCode)}` +
-    `&chatCode=${String(chatCode)}` +
-    `&courtyardCode=${String(courtyardCode)}` +
-    `&patId=${String(patId)}` +
-    `&cardNo=${String(cardNo)}`
-
+  const url = `/book-offline/doc-list/index?deptCode=${String(deptCode)}`
+    + `&chatCode=${String(chatCode)}`
+    + `&courtyardCode=${String(courtyardCode)}`
+    + `&patId=${String(patId)}`
+    + `&cardNo=${String(cardNo)}`
 
   console.log('url', url)
 
   // 优先在微信小程序 WebView 环境内跳转
   if (wx.miniProgram?.redirectTo) {
     wx.miniProgram.redirectTo({ url })
-  } else {
+  }
+  else {
     // 非小程序环境的兜底处理
     console.warn('未检测到微信小程序环境，无法跳转。目标URL:', url)
     alert('请在微信小程序中跳转')
   }
+}
+
+function callbackHandle(val: number, text?: string) {
+  nextTick(() => {
+    toScrollBottom()
+  })
+
+  if (val === 1) {
+    fetchHandle(webSocket.chat_id, val)
+  }
+  else {
+    if (!text)
+      return
+    fetchHandle(webSocket.chat_id, val, text)
+  }
+
+  changeHandle(-1)
 }
 </script>
 
 <template>
   <!-- <recordAudio @transcript="onTranscript" style="margin-top: 50px;"></recordAudio> -->
   <div class="holdSpeak" :style="`z-index:${isRecording ? 999 : -1}`">
-    <holdSpeak ref="holdSpeakRef" @transcript="onTranscript"></holdSpeak>
+    <holdSpeak ref="holdSpeakRef" @transcript="onTranscript" />
   </div>
   <div class="headerTab">
     <div>智能分诊</div>
   </div>
   <div ref="main" class="main">
     <div class="dialogue">
-      <div class="cases" v-if="isCase" @click="isDialog = true">
+      <div v-if="isCase" class="cases" @click="isDialog = true">
         <img src="@/assets/cases1.png" alt="">
         已传病例
         <img class="caseImg" src="@/assets/cases2.png" alt="">
@@ -201,8 +220,12 @@ const handleGoWX = (dept: any) => {
           <div class="responseCont" style="margin-top: 20px">
             <div class="chatAnswer">
               <div class="chatTxt" style="max-width: 100%;">
-                <div style="color: #2386FF;margin-bottom: 20px;">您好，欢迎来到智能分诊服务～</div>
-                <div style="margin-bottom: 20px;">为了更高效地帮您办理就诊事宜，想先问一下：您本次就诊是【初诊】还是【复诊】呢？​</div>
+                <div style="color: #2386FF;margin-bottom: 20px;">
+                  您好，欢迎来到智能分诊服务～
+                </div>
+                <div style="margin-bottom: 20px;">
+                  为了更高效地帮您办理就诊事宜，想先问一下：您本次就诊是【初诊】还是【复诊】呢？
+                </div>
                 <p>如果是【初诊】，我会先帮您分析您的病情信息，以便更精准地推荐就诊科室；</p>
                 <p>如果是【复诊】，您可以直接告诉我想挂号的科室，我会马上为您查询号源～</p>
               </div>
@@ -211,38 +234,44 @@ const handleGoWX = (dept: any) => {
 
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
-            <div v-if="item.role == 'user'" class="infoCont" ref="msgRefs">
-              <img class="withdraw" @click="withdraw(item.id)" src="@/assets/withdraw.png" alt="">
+            <div v-if="item.role == 'user'" ref="msgRefs" class="infoCont">
+              <img class="withdraw" src="@/assets/icon/withdraw.png" alt="" @click="withdraw(item.id)">
               <div class="textCont">
                 <div>{{ item.content }}</div>
               </div>
             </div>
             <!-- AI助手消息 -->
-            <div v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
-              class="chatAnswer">
+            <div
+              v-else :class="{ 'mt-30': i > 0 && webSocket.historyList[i - 1].type === 'chat_stream' }"
+              class="chatAnswer"
+            >
               <div :class="item.content === '' ? 'isLoading' : 'chatTxt'">
                 <div>
-                  <span v-html="md.render(item.content)"></span>
+                  <span v-html="md.render(item.content)" />
                   <span
                     v-if="(item.metadata ? JSON.parse(item.metadata)?.upload_medical_record : false) || item.upload_medical_record"
                     style="color: #2386FF;" @click="router.push({
-    path: '/caseMaterial', query: {
-      hos_code: webSocket.hos_code,
-      medical_record_no: webSocket.medical_record_no,
-      pat_id: webSocket.patId,
-      card_no: webSocket.cardNo,
-      type: webSocket.SourceType,
-      registration_no: webSocket.registration_no
-    }
-  })">
+                      path: '/caseMaterial',
+                      query: {
+                        hos_code: webSocket.hos_code,
+                        medical_record_no: webSocket.medical_record_no,
+                        pat_id: webSocket.patId,
+                        card_no: webSocket.cardNo,
+                        type: webSocket.SourceType,
+                        registration_no: webSocket.registration_no,
+                      },
+                    })"
+                  >
                     【上传】
                   </span>
                 </div>
               </div>
             </div>
             <div v-if="item.role !== 'user'">
-              <div v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
-                style="color:#000">
+              <div
+                v-if="item.quick_options?.length > 0 && item.recommended_dept?.length == 0" class="tagBox"
+                style="color:#000"
+              >
                 <div class="tagList">
                   <div v-for="name in item.quick_options" :key="name" class="tagName" @click="sendTag(item, name)">
                     {{ name }}
@@ -265,7 +294,9 @@ const handleGoWX = (dept: any) => {
                       {{ item.recommended_dept?.name || '' }} {{ item.recommended_doctor || '' }}
                     </div>
                     <div class="itemContent">
-                      <div class="info">{{ item.recommended_dept?.desc || '' }}</div>
+                      <div class="info">
+                        {{ item.recommended_dept?.desc || '' }}
+                      </div>
                       <div class="btn" @click="handleGoWX(item.recommended_dept)">
                         去挂号
                       </div>
@@ -275,6 +306,10 @@ const handleGoWX = (dept: any) => {
                     没有符合的科室，选择<span @click="backPrev">其他科室</span>
                   </div> -->
                 </div>
+                <!-- 推荐反馈提交 -->
+                <SubmitFeedback
+                  v-if="submitFeedbackRes === item.id" :callback="callbackHandle"
+                />
               </div>
             </div>
           </div>
@@ -286,20 +321,26 @@ const handleGoWX = (dept: any) => {
       <div class="Bottombox">
         <div class="defaultInputText">
           <div class="sendbox">
-            <img v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
-              @click="holdSpeakStart ? '' : holdSpeakRef?.start(); holdSpeakStart = true; isVoice = true">
+            <img
+              v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
+              @click="holdSpeakStart ? '' : holdSpeakRef?.start(); holdSpeakStart = true; isVoice = true"
+            >
             <div v-if="isVoice" style="display: flex;align-items: center;" @click="isVoice = false">
               <img alt="" src="@/assets/keyboard.png">
             </div>
-            <textarea id="input" ref="inputRef" rows="1" style="overflow: hidden" v-show="!isVoice"
-              v-model.trim="webSocket.userContext" class="sendInput" placeholder="请描述病情症状持续时长、越详细推荐越准"
-              @keydown.enter.stop="onTranscript(webSocket.userContext)" @input="getHeight()">
-            </textarea>
+            <textarea
+              v-show="!isVoice" id="input" ref="inputRef" v-model.trim="webSocket.userContext" rows="1"
+              style="overflow: hidden" class="sendInput" placeholder="请描述病情、症状、持续时长"
+              @keydown.enter.prevent=" onTranscript(webSocket.userContext)" @input="getHeight()"
+            />
             <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
               发送
             </div>
-            <button class="record" :class="{ active: isRecording }" @touchstart.prevent="startRecord"
-              @touchend.prevent="stopRecord" v-show="isVoice">按住说话
+            <button
+              v-show="isVoice" class="record" :class="{ active: isRecording }" @touchstart.prevent="startRecord"
+              @touchend.prevent="stopRecord"
+            >
+              按住说话
             </button>
           </div>
         </div>
@@ -311,7 +352,6 @@ const handleGoWX = (dept: any) => {
       </div>
     </el-dialog>
   </div>
-
 </template>
 
 <style lang="scss" scoped>
@@ -719,7 +759,6 @@ const handleGoWX = (dept: any) => {
     }
   }
 
-
   .Title {
     display: flex;
     position: absolute;
@@ -914,8 +953,6 @@ const handleGoWX = (dept: any) => {
         }
       }
 
-
-
       .responseCont {
 
         //padding-bottom:14px;
@@ -930,7 +967,7 @@ const handleGoWX = (dept: any) => {
           padding: 30px 0 0;
 
           .withdraw {
-            width: 16px;
+            width: 28px;
             margin-right: 20px;
           }
 
@@ -954,6 +991,7 @@ const handleGoWX = (dept: any) => {
 
           .textCont {
             //background: #e1effe;
+            word-break: break-all;
             background: #529EEE4D;
             max-width: calc(100% - 80px);
             font-size: 15px;
@@ -1171,7 +1209,6 @@ const handleGoWX = (dept: any) => {
             }
           }
 
-
         }
 
         .tagBox {
@@ -1220,6 +1257,7 @@ const handleGoWX = (dept: any) => {
               align-items: center;
               font-size: 16px;
               color: #333333;
+              font-weight: bold;
               margin-bottom: 10px;
 
               img {
@@ -1353,8 +1391,6 @@ const handleGoWX = (dept: any) => {
       margin-top: 5px;
     }
 
-
-
     .defaultInputText {
       width: 100%;
 
@@ -1382,14 +1418,14 @@ const handleGoWX = (dept: any) => {
       }
 
       .sendBtn {
-        width: 52px;
+        width: 88px;
         height: 32px;
         border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 14px;
         color: #fff;
         background: #2B7DFF;
         font-weight: 500;

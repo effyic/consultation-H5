@@ -1,11 +1,5 @@
-<template>
-  <div class="voice-visualizer" ref="containerRef">
-    <canvas ref="canvasRef"></canvas>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onBeforeUnmount, nextTick, defineExpose, defineEmits } from 'vue'
+import { defineEmits, defineExpose, nextTick, onBeforeUnmount, ref } from 'vue'
 import ChatService from '@/api/chat'
 
 const emit = defineEmits(['transcript'])
@@ -33,7 +27,7 @@ let heights: number[] = []
 let lastVolume = 0
 
 // =============== UI 相关 ===============
-const updateCanvasSize = () => {
+function updateCanvasSize() {
   const canvas = canvasRef.value!
   const container = containerRef.value!
   const dpr = window.devicePixelRatio || 1
@@ -43,8 +37,8 @@ const updateCanvasSize = () => {
 
   canvas.width = width * dpr
   canvas.height = height * dpr
-  canvas.style.width = width + 'px'
-  canvas.style.height = height + 'px'
+  canvas.style.width = `${width}px`
+  canvas.style.height = `${height}px`
 
   const ctx = canvas.getContext('2d')!
   ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -59,7 +53,7 @@ const updateCanvasSize = () => {
   }
 }
 
-const initResizeObserver = () => {
+function initResizeObserver() {
   resizeObserver = new ResizeObserver(() => {
     updateCanvasSize()
   })
@@ -67,36 +61,36 @@ const initResizeObserver = () => {
 }
 
 // =============== 音频降噪和增强处理 ===============
-const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStreamAudioSourceNode) => {
+function createAudioProcessingChain(audioContext: AudioContext, source: MediaStreamAudioSourceNode) {
   // 1. 高通滤波器 - 去除低频噪音（如空调、风扇等）
   highpassFilter = audioContext.createBiquadFilter()
   highpassFilter.type = 'highpass'
-  highpassFilter.frequency.setValueAtTime(80, audioContext.currentTime)  // 80Hz以下的频率被过滤
+  highpassFilter.frequency.setValueAtTime(80, audioContext.currentTime) // 80Hz以下的频率被过滤
   highpassFilter.Q.setValueAtTime(0.7, audioContext.currentTime)
 
   // 2. 低通滤波器 - 去除高频噪音
   lowpassFilter = audioContext.createBiquadFilter()
   lowpassFilter.type = 'lowpass'
-  lowpassFilter.frequency.setValueAtTime(8000, audioContext.currentTime)  // 8kHz以上的频率被过滤
+  lowpassFilter.frequency.setValueAtTime(8000, audioContext.currentTime) // 8kHz以上的频率被过滤
   lowpassFilter.Q.setValueAtTime(0.7, audioContext.currentTime)
 
   // 3. 带通滤波器 - 专门针对人声频率范围（300Hz-3400Hz）
   const bandpassFilter = audioContext.createBiquadFilter()
   bandpassFilter.type = 'bandpass'
-  bandpassFilter.frequency.setValueAtTime(1850, audioContext.currentTime)  // 中心频率
-  bandpassFilter.Q.setValueAtTime(1.0, audioContext.currentTime)  // 较宽的带宽
+  bandpassFilter.frequency.setValueAtTime(1850, audioContext.currentTime) // 中心频率
+  bandpassFilter.Q.setValueAtTime(1.0, audioContext.currentTime) // 较宽的带宽
 
   // 4. 动态压缩器 - 平衡音量，突出语音
   compressorNode = audioContext.createDynamicsCompressor()
-  compressorNode.threshold.setValueAtTime(-24, audioContext.currentTime)    // 阈值
-  compressorNode.knee.setValueAtTime(30, audioContext.currentTime)          // 膝点
-  compressorNode.ratio.setValueAtTime(12, audioContext.currentTime)         // 压缩比
-  compressorNode.attack.setValueAtTime(0.003, audioContext.currentTime)     // 攻击时间
-  compressorNode.release.setValueAtTime(0.25, audioContext.currentTime)     // 释放时间
+  compressorNode.threshold.setValueAtTime(-24, audioContext.currentTime) // 阈值
+  compressorNode.knee.setValueAtTime(30, audioContext.currentTime) // 膝点
+  compressorNode.ratio.setValueAtTime(12, audioContext.currentTime) // 压缩比
+  compressorNode.attack.setValueAtTime(0.003, audioContext.currentTime) // 攻击时间
+  compressorNode.release.setValueAtTime(0.25, audioContext.currentTime) // 释放时间
 
   // 5. 增益节点 - 语音增强
   gainNode = audioContext.createGain()
-  gainNode.gain.setValueAtTime(2.0, audioContext.currentTime)  // 增加增益
+  gainNode.gain.setValueAtTime(2.0, audioContext.currentTime) // 增加增益
 
   // 6. 噪声门限 - 静音时自动降噪
   const noiseGate = audioContext.createGain()
@@ -122,11 +116,12 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
       // 如果音量过低，逐渐降低增益
       if (average < 10) {
         silenceTimer++
-        if (silenceTimer > 10) {  // 连续静音一段时间后降低增益
+        if (silenceTimer > 10) { // 连续静音一段时间后降低增益
           const currentGain = Math.max(0.1, gainNode.gain.value * 0.95)
           gainNode.gain.setValueAtTime(currentGain, audioContext.currentTime)
         }
-      } else {
+      }
+      else {
         silenceTimer = 0
         // 有声音时恢复正常增益
         gainNode.gain.setValueAtTime(2.0, audioContext.currentTime)
@@ -134,7 +129,7 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
     }
 
     if (audioContext && audioContext.state === 'running') {
-      setTimeout(checkAudioLevel, 100)  // 每100ms检查一次
+      setTimeout(checkAudioLevel, 100) // 每100ms检查一次
     }
   }
 
@@ -143,7 +138,7 @@ const createAudioProcessingChain = (audioContext: AudioContext, source: MediaStr
 
   return noiseGate
 }
-const uploadAudioAndGetTranscript = async (blob: Blob) => {
+async function uploadAudioAndGetTranscript(blob: Blob) {
   const formData = new FormData()
   const extension = blob.type.includes('webm') ? 'webm' : 'wav'
   formData.append('file', blob, `recording.${extension}`)
@@ -153,28 +148,30 @@ const uploadAudioAndGetTranscript = async (blob: Blob) => {
 }
 
 // =============== 录音相关 ===============
-const startRecording = () => {
+function startRecording() {
   recordedChunks = []
   mediaRecorder?.start()
   isRecording = true
   console.log('开始录音')
 }
 
-const stopRecordingAndUpload = async () => {
-  if (!isRecording) return
+async function stopRecordingAndUpload() {
+  if (!isRecording)
+    return
   isRecording = false
   mediaRecorder?.stop() // 会触发 onstop
 }
 
 // =============== 绘制音量柱 ===============
-const draw = () => {
+function draw() {
   animationId = requestAnimationFrame(draw)
-  if (!analyser || !dataArray) return
+  if (!analyser || !dataArray)
+    return
 
   analyser.getByteTimeDomainData(dataArray)
-  const volume =
-    dataArray.reduce((sum, val) => sum + Math.abs(val - 128), 0) /
-    dataArray.length
+  const volume
+    = dataArray.reduce((sum, val) => sum + Math.abs(val - 128), 0)
+      / dataArray.length
 
   const smoothVolume = lastVolume + (volume - lastVolume) * SMOOTHNESS
   lastVolume = smoothVolume
@@ -207,7 +204,7 @@ const draw = () => {
 }
 
 // =============== 初始化音频流 ===============
-const start = async () => {
+async function start() {
   await nextTick()
   updateCanvasSize()
   initResizeObserver()
@@ -216,13 +213,13 @@ const start = async () => {
     // 优化音频约束，提高语音识别质量
     const constraints = {
       audio: {
-        echoCancellation: true,        // 回声消除
-        noiseSuppression: true,        // 噪音抑制
-        autoGainControl: true,         // 自动增益控制
-        sampleRate: 16000,             // 采样率16kHz，适合语音识别
-        channelCount: 1,               // 单声道
-        volume: 1.0                    // 音量
-      }
+        echoCancellation: true, // 回声消除
+        noiseSuppression: true, // 噪音抑制
+        autoGainControl: true, // 自动增益控制
+        sampleRate: 16000, // 采样率16kHz，适合语音识别
+        channelCount: 1, // 单声道
+        volume: 1.0, // 音量
+      },
     }
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
@@ -231,7 +228,7 @@ const start = async () => {
 
     analyser = audioContext.createAnalyser()
     analyser.fftSize = 128
-    analyser.smoothingTimeConstant = 0.8  // 增加平滑度
+    analyser.smoothingTimeConstant = 0.8 // 增加平滑度
 
     const bufferLength = analyser.frequencyBinCount
     dataArray = new Uint8Array(bufferLength)
@@ -249,19 +246,23 @@ const start = async () => {
     let options
     if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
       options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 16000 }
-    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+    }
+    else if (MediaRecorder.isTypeSupported('audio/webm')) {
       options = { mimeType: 'audio/webm', audioBitsPerSecond: 16000 }
-    } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+    }
+    else if (MediaRecorder.isTypeSupported('audio/wav')) {
       options = { mimeType: 'audio/wav' }
-    } else {
+    }
+    else {
       throw new Error('当前设备不支持录音')
     }
 
     // 使用处理后的音频流进行录音
     mediaRecorder = new MediaRecorder(processedStream, options)
 
-    mediaRecorder.ondataavailable = e => {
-      if (e.data.size > 0) recordedChunks.push(e.data)
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0)
+        recordedChunks.push(e.data)
     }
 
     mediaRecorder.onstop = async () => {
@@ -273,19 +274,22 @@ const start = async () => {
       try {
         const text = await uploadAudioAndGetTranscript(audioBlob)
         emit('transcript', text)
-      } catch (err) {
+      }
+      catch (err) {
         console.error('转写失败:', err)
         emit('transcript', '')
       }
     }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('获取麦克风失败:', e)
     emit('transcript', '')
   }
 }
 
-const stop = () => {
-  if (animationId) cancelAnimationFrame(animationId)
+function stop() {
+  if (animationId)
+    cancelAnimationFrame(animationId)
   animationId = null
 
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -339,6 +343,12 @@ onBeforeUnmount(() => {
   stop()
 })
 </script>
+
+<template>
+  <div ref="containerRef" class="voice-visualizer">
+    <canvas ref="canvasRef" />
+  </div>
+</template>
 
 <style scoped>
 .voice-visualizer {

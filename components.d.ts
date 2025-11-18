@@ -13,6 +13,8 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SvgIcon: typeof import('./src/components/SvgIcon/index.vue')['default']
     VanButton: typeof import('vant/es')['Button']
+    VanCellGroup: typeof import('vant/es')['CellGroup']
+    VanField: typeof import('vant/es')['Field']
     VanPopover: typeof import('vant/es')['Popover']
     VanTab: typeof import('vant/es')['Tab']
     VanTabs: typeof import('vant/es')['Tabs']
