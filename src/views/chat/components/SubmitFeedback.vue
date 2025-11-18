@@ -34,10 +34,11 @@ const val = ref<string>('')
 const btnActive = ref<number>(0)
 function btnHandle(id: number) {
   btnActive.value = id
-  callback && callback(id, val.value)
+
+  callback && callback(id, val.value, true)
 }
 function sumbitHandle() {
-  callback && callback(btnActive.value, val.value)
+  callback && callback(btnActive.value, val.value, false)
 }
 </script>
 

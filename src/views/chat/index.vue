@@ -181,7 +181,7 @@ function handleGoWX(dept: any) {
   }
 }
 
-function callbackHandle(val: number, text?: string) {
+function callbackHandle(val: number, text: string, type: boolean) {
   nextTick(() => {
     toScrollBottom()
   })
@@ -190,7 +190,7 @@ function callbackHandle(val: number, text?: string) {
     fetchHandle(webSocket.chat_id, val)
   }
   else {
-    if (!text)
+    if (type)
       return
     fetchHandle(webSocket.chat_id, val, text)
   }
