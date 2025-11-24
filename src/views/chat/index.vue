@@ -8,7 +8,9 @@ import chat from '@/api/chat.ts'
 import { useWebSocket } from '@/stores/websocket.ts'
 import holdSpeak from './components/holdSpeak.vue'
 import SubmitFeedback from './components/SubmitFeedback.vue'
+import TypeComp from './components/Type.vue'
 import { changeHandle, fetchHandle, submitFeedbackRes } from './hooks/useFeedback'
+import { isShowTypeBtn } from './hooks/useType'
 
 const router = useRouter()
 const route = useRoute()
@@ -231,6 +233,10 @@ function callbackHandle(val: number, text: string, type: boolean) {
               </div>
             </div>
           </div>
+          <!-- 初诊和复诊选项 -->
+          <TypeComp
+            v-if="isShowTypeBtn" @type-click-handle="(val) => onTranscript(val)"
+          />
 
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
@@ -307,9 +313,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
                   </div> -->
                 </div>
                 <!-- 推荐反馈提交 -->
-                <SubmitFeedback
-                  v-if="submitFeedbackRes === item.id" :callback="callbackHandle"
-                />
+                <SubmitFeedback v-if="submitFeedbackRes === item.id" :callback="callbackHandle" />
               </div>
             </div>
           </div>
@@ -318,7 +322,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
       <div class="AIcheck">
         AI智能分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
       </div>
-      <div class="Bottombox">
+      <div v-if="!isShowTypeBtn" class="Bottombox">
         <div class="defaultInputText">
           <div class="sendbox">
             <img
