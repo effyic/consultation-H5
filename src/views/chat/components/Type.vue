@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { changeHandle } from '../hooks/useType'
+import { changeTriageHandle } from '../hooks/useType'
 
 const emit = defineEmits(['typeClickHandle'])
 
@@ -23,7 +23,7 @@ const btnList = [
 function clickHandle(val: string, name: string) {
   btnActive.value = val
   emit('typeClickHandle', name)
-  changeHandle(false)
+  changeTriageHandle(false)
 }
 </script>
 

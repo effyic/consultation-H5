@@ -10,7 +10,7 @@ import holdSpeak from './components/holdSpeak.vue'
 import SubmitFeedback from './components/SubmitFeedback.vue'
 import TypeComp from './components/Type.vue'
 import { changeHandle, fetchHandle, submitFeedbackRes } from './hooks/useFeedback'
-import { isShowTypeBtn } from './hooks/useType'
+import { changeTriageHandle, isShowTypeBtn } from './hooks/useType'
 
 const router = useRouter()
 const route = useRoute()
@@ -144,8 +144,13 @@ function stopRecord() {
 const holdSpeakStart = ref(false)
 
 function withdraw(id: number) {
+  const flag = !webSocket.historyList.find(item => (item.id === id && (item.message === '初诊' || item.message === '复诊')))
+
   chat.deleteMessages({ message_ids: [id, id + 1] }).then((res) => {
     webSocket.historyList = webSocket.historyList.filter(item => item.id !== id && item.id !== id + 1)
+    if (!flag && webSocket.historyList.length === 0) {
+      changeTriageHandle(true)
+    }
   })
 }
 
@@ -333,7 +338,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
             <textarea
               v-show="!isVoice" id="input" ref="inputRef" v-model.trim="webSocket.userContext" rows="1"
               style="overflow: hidden" class="sendInput" placeholder="请描述病情、症状、持续时长"
-              @keydown.enter.prevent=" onTranscript(webSocket.userContext)" @input="getHeight()"
+              @keydown.enter.prevent="onTranscript(webSocket.userContext)" @focus="toScrollBottom" @input="getHeight"
             />
             <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
               发送
@@ -780,6 +785,9 @@ function callbackHandle(val: number, text: string, type: boolean) {
   .dialogue::-webkit-scrollbar {
     width: 0 !important;
   }
+  .dialogue::scrollbar-width{
+     width: 0 !important;
+  };
 
   .content::-webkit-scrollbar {
     width: 0 !important;

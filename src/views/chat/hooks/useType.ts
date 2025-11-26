@@ -2,11 +2,11 @@ import { ref } from 'vue'
 
 const isShowTypeBtn = ref<boolean>(true)
 
-function changeHandle(bool: boolean) {
+function changeTriageHandle(bool: boolean) {
     isShowTypeBtn.value = bool
 }
 
 export {
-    changeHandle,
+    changeTriageHandle,
     isShowTypeBtn,
 }
