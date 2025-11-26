@@ -219,7 +219,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
       <div ref="messageCont" class="content">
         <div class="message-wrapper">
           <img class="chatTop" src="@/assets/chatTop.png" alt="">
-          <div class="responseCont" style="margin-top: 20px">
+          <div class="responseCont" style="margin-top: 12px">
             <div class="chatAnswer">
               <div class="chatTxt" style="max-width: 100%;">
                 <div style="color: #2386FF;margin-bottom: 20px;">
@@ -233,18 +233,14 @@ function callbackHandle(val: number, text: string, type: boolean) {
               </div>
             </div>
           </div>
-          <!-- 初诊和复诊选项 -->
-          <TypeComp
-            v-if="isShowTypeBtn" @type-click-handle="(val) => onTranscript(val)"
-          />
 
           <div v-for="(item, i) in webSocket.historyList" :key="i" class="responseCont">
             <!-- 用户消息 -->
             <div v-if="item.role == 'user'" ref="msgRefs" class="infoCont">
-              <img class="withdraw" src="@/assets/icon/withdraw.png" alt="" @click="withdraw(item.id)">
               <div class="textCont">
                 <div>{{ item.content }}</div>
               </div>
+              <img class="withdraw" src="@/assets/icon/withdraw.png" alt="" @click="withdraw(item.id)">
             </div>
             <!-- AI助手消息 -->
             <div
@@ -319,11 +315,13 @@ function callbackHandle(val: number, text: string, type: boolean) {
           </div>
         </div>
       </div>
-      <div class="AIcheck">
-        AI智能分诊推荐的科室仅供参考、具体诊疗及科室选择建议以线下医院医生的专业判断为准
-      </div>
-      <div v-if="!isShowTypeBtn" class="Bottombox">
-        <div class="defaultInputText">
+
+      <div class="Bottombox">
+        <!-- 初诊和复诊选项 -->
+        <TypeComp
+          v-if="isShowTypeBtn" @type-click-handle="(val) => onTranscript(val)"
+        />
+        <div v-if="!isShowTypeBtn" class="defaultInputText">
           <div class="sendbox">
             <img
               v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
@@ -348,6 +346,10 @@ function callbackHandle(val: number, text: string, type: boolean) {
             </button>
           </div>
         </div>
+      </div>
+      <div class="AIcheck">
+        <p>AI智能分诊推荐的科室仅供参考</p>
+        <p>具体诊疗及科室选择建议以线下医院医生的专业判断为准</p>
       </div>
     </div>
     <el-dialog v-model="isDialog">
@@ -811,8 +813,8 @@ function callbackHandle(val: number, text: string, type: boolean) {
   .dialogue {
     // height: calc(100vh - 90px); /* 回退方案 */
     height: 100%;
-    //background:#F8F8FA;
-    background-image: linear-gradient(180deg, rgba(249, 250, 251, 0.9), rgba(242, 244, 247, 0.9) 90.48%);
+    background:#F1F5FB;
+    // background-image: linear-gradient(180deg, rgba(249, 250, 251, 0.9), rgba(242, 244, 247, 0.9) 90.48%);
     //border-top-left-radius: 20px;
     //border-top-right-radius: 20px;
     //padding:24px 16px;
@@ -945,7 +947,6 @@ function callbackHandle(val: number, text: string, type: boolean) {
       }
 
       .chatTop {
-        margin-top: 10;
         width: 100%;
       }
 
@@ -966,13 +967,14 @@ function callbackHandle(val: number, text: string, type: boolean) {
 
         .infoCont {
           display: flex;
+          flex-direction: column;
           justify-content: end;
-          align-items: center;
-          padding: 30px 0 0;
+          align-items: flex-end;
+          padding: 20px 0 0;
 
           .withdraw {
-            width: 28px;
-            margin-right: 20px;
+            width: 24px;
+            margin-top: 8px;
           }
 
           .avatar {
@@ -996,15 +998,15 @@ function callbackHandle(val: number, text: string, type: boolean) {
           .textCont {
             //background: #e1effe;
             word-break: break-all;
-            background: #529EEE4D;
+            background: #B0D3ff;
             max-width: calc(100% - 80px);
             font-size: 15px;
             //color: #101828;
-            color: #000000D9;
+            color: #333;
             padding: 12px 16px;
             box-sizing: border-box;
             display: inline-block;
-            border-radius: 15px;
+            border-radius: 10px 10px 0px 10px;
             min-height: 48px;
           }
         }
@@ -1024,7 +1026,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
           }
 
           .chatTxt {
-            margin-top: 30px;
+            margin-top: 20px;
             font-size: 15px;
             background: #fff;
             color: #101828;
@@ -1364,6 +1366,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
     padding-top: 8px;
     text-align: center;
     margin: auto;
+    color:#999;
   }
 
   .Bottombox {

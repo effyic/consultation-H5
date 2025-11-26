@@ -42,25 +42,29 @@ function clickHandle(val: string, name: string) {
 .type-container {
     --base-color: #2386ff;
     --active-bg: #C0DCFF;
-    background: #fff;
     margin-top: 8px;
     border-radius: 8px;
     width: 100%;
     display: flex;
-
+    gap: 10px;
     .btn {
         flex: 1;
         text-align: center;
-        padding: 8px;
+        height: 32px;
+        line-height: 32px;
+        border-radius: 32px;
+        background: var(--base-color);
+        color: #fff;
+        font-size: 14px;
 
-        &:nth-of-type(1) {
-            border-radius: 8px 0px 0px 8px;
-            border-right: 1px solid #e3e4e5;
-        }
+        // &:nth-of-type(1) {
+        //     border-radius: 8px 0px 0px 8px;
+        //     border-right: 1px solid #e3e4e5;
+        // }
 
-        &:nth-of-type(2) {
-            border-radius: 0px 8px 8px 0px;
-        }
+        // &:nth-of-type(2) {
+        //     border-radius: 0px 8px 8px 0px;
+        // }
 
     }
 
