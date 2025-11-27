@@ -32,16 +32,18 @@ function toScrollBottom() {
   })
 }
 
+function delayScrollBottom() {
+  setTimeout(() => {
+    toScrollBottom() // 软键盘弹起后滚动到底部
+  }, 300) // 延迟可保证软键盘弹起完成
+}
+
 const isCase = ref(false)
 const imgList = ref<any>([])
 onMounted(() => {
   console.log('window', window.location.href)
   if (inputRef.value) {
-    inputRef.value.addEventListener('focus', () => {
-      setTimeout(() => {
-        toScrollBottom() // 软键盘弹起后滚动到底部
-      }, 300) // 延迟可保证软键盘弹起完成
-    })
+    inputRef.value.addEventListener('focus', delayScrollBottom)
   }
   nextTick(() => {
     const container = messageCont.value
@@ -157,9 +159,9 @@ function withdraw(id: number) {
 function getHeight() {
   const target = document.getElementById('input') as HTMLTextAreaElement
   target.style.height = 'auto'
-  if (target.value) {
-    target.style.height = `${target.scrollHeight}px`
-  }
+  // if (target.value) {
+  target.style.height = `${target.scrollHeight}px`
+  // }
 }
 
 function handleGoWX(dept: any) {
@@ -338,7 +340,7 @@ function callbackHandle(val: number, text: string, type: boolean) {
             <textarea
               v-show="!isVoice" id="input" ref="inputRef" v-model.trim="webSocket.userContext" rows="1"
               style="overflow: hidden" class="sendInput" placeholder="请描述病情、症状、持续时长"
-              @keydown.enter.prevent="onTranscript(webSocket.userContext)" @focus="toScrollBottom" @input="getHeight"
+              @keydown.enter.prevent="onTranscript(webSocket.userContext)" @focus="delayScrollBottom" @input="getHeight()"
             />
             <div v-if="!isVoice" class="sendBtn" @click="onTranscript(webSocket.userContext)">
               发送
