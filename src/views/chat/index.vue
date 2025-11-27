@@ -326,9 +326,9 @@ function callbackHandle(val: number, text: string, type: boolean) {
       <div class="Bottombox">
         <!-- 初诊和复诊选项 -->
         <TypeComp
-          v-if="isShowTypeBtn" @type-click-handle="(val) => onTranscript(val)"
+          v-if="isShowTypeBtn && !webSocket.registration_no" @type-click-handle="(val) => onTranscript(val)"
         />
-        <div v-if="!isShowTypeBtn" class="defaultInputText">
+        <div v-else class="defaultInputText">
           <div class="sendbox">
             <img
               v-if="!isVoice" alt="" src="@/assets/voiceStart.png"
